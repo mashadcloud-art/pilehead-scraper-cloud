@@ -2141,7 +2141,13 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
 //  ipcRenderer is available directly via require('electron')
 // ════════════════════════════════════════════════
 
-const { ipcRenderer, shell } = require('electron');
+let ipcRenderer = { send: () => {}, invoke: async () => {}, on: () => {} };
+let shell = { openExternal: () => {} };
+if (typeof require !== 'undefined') {
+  const electron = require('electron');
+  ipcRenderer = electron.ipcRenderer;
+  shell = electron.shell;
+}
 
 // ── Cloud UI Migration ──
 function logRenderer(msg) {
@@ -2171,6 +2177,7 @@ function saveCfg(patch) {
 
 function loadCfgFile() {
   try {
+    if (typeof require === 'undefined') return {};
     const fs = require('fs');
     const path = require('path');
     const p = path.join(process.cwd(), 'config', 'settings.json');
@@ -2529,16 +2536,18 @@ document.getElementById('home-btn').addEventListener('click', showDashboard);
 
 // Window controls — nodeIntegration mode (no preload needed)
 document.querySelector('.tl-red')?.addEventListener('click', () => {
-  require('electron').remote?.getCurrentWindow().close() ||
-  ipcRenderer.send('window-close');
+  if (typeof require !== 'undefined') require('electron').remote?.getCurrentWindow().close();
+  else ipcRenderer.send('window-close');
 });
 document.querySelector('.tl-yellow')?.addEventListener('click', () => {
-  require('electron').remote?.getCurrentWindow().minimize() ||
-  ipcRenderer.send('window-minimize');
+  if (typeof require !== 'undefined') require('electron').remote?.getCurrentWindow().minimize();
+  else ipcRenderer.send('window-minimize');
 });
 document.querySelector('.tl-green')?.addEventListener('click', () => {
-  const win = require('electron').remote?.getCurrentWindow();
-  if(win) win.isMaximized() ? win.unmaximize() : win.maximize();
+  if (typeof require !== 'undefined') {
+    const win = require('electron').remote?.getCurrentWindow();
+    if(win) win.isMaximized() ? win.unmaximize() : win.maximize();
+  }
   else ipcRenderer.send('window-maximize');
 });
 
