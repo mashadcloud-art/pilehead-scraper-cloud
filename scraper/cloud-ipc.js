@@ -6,6 +6,84 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
+const fosroc = require('./fosroc');
+const amazon = require('./amazon');
+const noon = require('./noon');
+const fepy = require('./fepy');
+const karcher = require('./karcher');
+const universal = require('./universal');
+let orchestrator; try { orchestrator = require('./unified/orchestrator'); } catch (e) {}
+
+
+
+
+function makeIkUploader(ikPrivateKey, folder) {
+    const authHeader = 'Basic ' + Buffer.from(`${ikPrivateKey}:`).toString('base64');
+    const IK_UPLOAD  = 'https://upload.imagekit.io/api/v1/files/upload';
+    return async function uploadUrlToIK(fileUrl, fileName, binaryBuffer = null) {
+        // Force .png extension when uploading a BG-removed buffer (output is always PNG)
+        const uploadFileName = binaryBuffer
+            ? fileName.replace(/\.[^.]+$/, '') + '.png'
+            : fileName;
+        const form = new FormData();
+        form.append('fileName', uploadFileName);
+        form.append('folder', folder);
+        form.append('useUniqueFileName', 'false');
+        if (binaryBuffer) {
+            const blob = new Blob([binaryBuffer], { type: 'image/png' });
+            form.append('file', blob, uploadFileName);
+        } else {
+            // URL-based upload: ImageKit fetches the image itself — fast, no download on our end
+            form.append('file', fileUrl);
+        }
+        const res = await axios.post(IK_UPLOAD, form, {
+            headers: { Authorization: authHeader },
+            timeout: 120000
+        });
+        return res.data.url;
+    };
+}
+
+async function autoUploadGcsToIK(config, uploadResult) {
+    if (!config || !config.ik || !config.ik.privateKey) return {};
+    if (!uploadResult) return {};
+    const ikFolder      = (config.ik.folder || '/pilehead').trim();
+    const uploadIK      = makeIkUploader(config.ik.privateKey, ikFolder);
+    const siteUrl       = config.wp && config.wp.url    ? config.wp.url    : '';
+    const key           = config.wp && config.wp.key    ? config.wp.key    : '';
+    const secret        = config.wp && config.wp.secret ? config.wp.secret : '';
+    const gcsImages     = uploadResult.gcs_images || {};
+    const gcsMain       = gcsImages.main || '';
+    const gcsGallery    = Array.isArray(gcsImages.gallery) ? gcsImages.gallery : [];
+    const productId     = uploadResult.product && uploadResult.product.id ? uploadResult.product.id : 0;
+    if (!gcsMain || !productId) return {};
+    const result = {};
+    try {
+        const mainFileName = path.basename(gcsMain.split('?')[0]) || `product-${productId}.jpg`;
+        const ikMain = await uploadIK(gcsMain, mainFileName);
+        await writeWpMeta(siteUrl, key, secret, productId, 'imagekit_image_url', ikMain);
+        result.main = ikMain;
+        if (gcsGallery.length) {
+            const ikGallery = [];
+            for (const gUrl of gcsGallery) {
+                try {
+                    const gName = path.basename(gUrl.split('?')[0]) || `gallery-${productId}-${ikGallery.length}.jpg`;
+                    ikGallery.push(await uploadIK(gUrl, gName));
+                } catch (_) {}
+            }
+            if (ikGallery.length) {
+                const galleryStr = ikGallery.join('|');
+                await writeWpMeta(siteUrl, key, secret, productId, 'imagekit_gallery_urls', galleryStr);
+                result.gallery = galleryStr;
+            }
+        }
+    } catch (err) {
+        result.error = err.message;
+        console.error('[Main] Auto IK upload failed:', err.message);
+    }
+    return result;
+}
+
 async function handle(channel, data) {
     console.log('[CloudIPC] Received channel:', channel);
     try {
@@ -129,3 +207,4 @@ async function handle(channel, data) {
     }
 }
 module.exports = { handle };
+
