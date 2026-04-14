@@ -158,6 +158,19 @@ app.post('/api/config', (req, res) => {
   }
 });
 
+// ── UNIVERSAL IPC BRIDGE ──
+const cloudIpc = require('./scraper/cloud-ipc');
+app.post('/api/ipc', async (req, res) => {
+    try {
+        const { channel, data } = req.body;
+        const result = await cloudIpc.handle(channel, data);
+        res.json(result || { success: true });
+    } catch (e) {
+        console.error('IPC Bridge Error:', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.get('/api/status', (req, res) => {
   res.json({ status: 'Online', engine: 'Pilehead Central API' });
 });

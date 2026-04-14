@@ -2141,7 +2141,23 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
 //  ipcRenderer is available directly via require('electron')
 // ════════════════════════════════════════════════
 
-let ipcRenderer = { send: () => {}, invoke: async () => ({ success: true, data: {} }), on: () => {} };
+let ipcRenderer = { 
+  send: () => {}, 
+  invoke: async (channel, data) => {
+      try {
+          const res = await fetch('/api/ipc', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ channel, data })
+          });
+          return await res.json();
+      } catch(e) {
+          console.error('IPC bridge error:', e);
+          return { success: false, error: e.message, data: {} };
+      }
+  }, 
+  on: () => {} 
+};
 let shell = { openExternal: () => {} };
 if (typeof require !== 'undefined') {
   const electron = require('electron');
