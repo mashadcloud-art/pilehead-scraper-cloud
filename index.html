@@ -2141,7 +2141,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
 //  ipcRenderer is available directly via require('electron')
 // ════════════════════════════════════════════════
 
-let ipcRenderer = { send: () => {}, invoke: async () => ({ success: true }), on: () => {} };
+let ipcRenderer = { send: () => {}, invoke: async () => ({ success: true, data: {} }), on: () => {} };
 let shell = { openExternal: () => {} };
 if (typeof require !== 'undefined') {
   const electron = require('electron');
