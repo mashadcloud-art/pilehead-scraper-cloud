@@ -1,5 +1,7 @@
 {
   "mashad": {
-    "passwordHash": "$2b$10$9BIXgmZYB00.flKs0inM4ut7Vy5SSpi.jrBz9.nG8FhQoATIOh6QK"
+    "passwordHash": "$2b$10$9BIXgmZYB00.flKs0inM4ut7Vy5SSpi.jrBz9.nG8FhQoATIOh6QK",
+    "isPaid": true,
+    "role": "admin"
   }
 }

@@ -50,6 +50,40 @@ app.post('/api/login', (req, res) => {
 });
 
 // Guard all other /api/ routes
+
+// -- REGISTER ROUTE (Open Trial Creation) --
+app.post('/api/register', (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const usersPath = require('path').join(__dirname, 'config', 'users.json');
+        const usersTable = JSON.parse(require('fs').readFileSync(usersPath, 'utf8'));
+        
+        if (usersTable[username]) {
+            return res.status(400).json({ success: false, error: 'Username already exists' });
+        }
+        
+        // Make Trial
+        const trialMs = 48 * 60 * 60 * 1000; // 48 Hours
+        usersTable[username] = {
+            passwordHash: bcrypt.hashSync(password, 10),
+            role: 'client',
+            createdAt: new Date().toISOString(),
+            trialEndsAt: new Date(Date.now() + trialMs).toISOString(),
+            isPaid: false
+        };
+        
+        require('fs').writeFileSync(usersPath, JSON.stringify(usersTable, null, 2));
+        
+        // Auto issue token
+        const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '72h' });
+        return res.json({ success: true, token, username });
+        
+    } catch (e) {
+        return res.status(500).json({ success: false, error: 'Registration failed ' + e.message });
+    }
+});
+
+// Guard all other /api/ routes
 app.use('/api', authenticateToken);
 
 // Helper function to resolve dynamic config path
