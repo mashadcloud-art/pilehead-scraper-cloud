@@ -135,7 +135,7 @@ app.post('/api/scrape', async (req, res) => {
   // Respond immediately so the browser isn't waiting indefinitely
   res.json({ success: true, message: 'Scraping engine has started!' });
 
-  const configPath = getConfigPath(req);
+  const configPath = getConfigPath(req);\n    const legacyPath = require('path').join(__dirname, 'config', 'settings.json');\n    if (!fs.existsSync(configPath) && req.user && req.user.username === 'mashad' && fs.existsSync(legacyPath)) {\n        const dir = require('path').dirname(configPath);\n        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });\n        fs.copyFileSync(legacyPath, configPath);\n        console.log('Migrated legacy config for mashad');\n    }
   let rawConfig = {};
   if (fs.existsSync(configPath)) {
       try { rawConfig = JSON.parse(fs.readFileSync(configPath, 'utf8') || '{}'); } catch(e){}
