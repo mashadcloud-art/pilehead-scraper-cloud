@@ -1,0 +1,40 @@
+{
+  "name": "pilehead-desktop-scraper",
+  "version": "1.1.0",
+  "description": "Desktop scraper application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "start-desktop": "electron ."
+  },
+  "build": {
+    "appId": "com.pilehead.scraper",
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^34.5.8",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "@imgly/background-removal-node": "^1.4.5",
+    "axios": "^1.13.5",
+    "cors": "^2.8.6",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "google-auth-library": "^10.5.0",
+    "pdf-parse": "^1.1.1",
+    "puppeteer": "^24.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "socket.io": "^4.8.3"
+  }
+}

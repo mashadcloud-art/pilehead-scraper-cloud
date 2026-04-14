@@ -1,0 +1,212 @@
+═════════════════════════════════════════════════════════════════════════════
+  🚀 FEPY COMPLETE PRODUCT SCRAPER - QUICK COMMAND REFERENCE
+═════════════════════════════════════════════════════════════════════════════
+
+⏱️  EXECUTION TIME: ~30-45 seconds per product
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ 1️⃣  SCRAPE FEPY PRODUCT (Extract all details)
+└─────────────────────────────────────────────────────────────────────────────
+
+$ node scrape_fepy_complete.js
+
+OUTPUT:
+✓ scraped_data/fepy_products/aluminium-extention-stick-3-mtr-tower.json
+✓ scraped_data/fepy_products/aluminium-extention-stick-3-mtr-tower_full.json
+
+WHAT IT DOES:
+├─ Scrapes: Title, Price, Brand, Category
+├─ Extracts: Specs, Attributes, Variations
+├─ Downloads: All images locally
+├─ Formats: HTML tabs for WordPress
+├─ Cleans: Text, removes brand names
+└─ Generates: SEO data & keywords
+
+═════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ 2️⃣  CONVERT TO WORDPRESS FORMATS (Generate upload files)
+└─────────────────────────────────────────────────────────────────────────────
+
+$ node fepy_bulk_upload.js
+
+OUTPUT:
+✓ wp_uploads/aluminium-extention-stick-3-mtr-tower_wp.json       # REST API
+✓ wp_uploads/aluminium-extention-stick-3-mtr-tower_wp_manual.html # Manual
+✓ wp_uploads/fepy_products_bulk_import.csv                        # Bulk Import
+
+WHAT IT DOES:
+├─ Converts JSON to WordPress format
+├─ Generates bulk import CSV
+├─ Creates HTML for manual entry
+├─ Formats attributes & variations
+├─ Prepares image paths
+└─ Generates SEO meta tags
+
+═════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ 3️⃣  UPLOAD TO WORDPRESS (Choose one method)
+└─────────────────────────────────────────────────────────────────────────────
+
+📌 METHOD A: BULK IMPORT (Easiest)
+   1. Go to: WordPress Admin → Products → Import
+   2. Upload: wp_uploads/fepy_products_bulk_import.csv
+   3. Click "Import"
+   ✓ Products auto-created with all details
+
+📌 METHOD B: REST API (Programmatic)
+   $ curl -X POST https://your-store.com/wp-json/wc/v3/products \
+     -H "Authorization: Basic <credentials>" \
+     -d @wp_uploads/aluminium-extention-stick-3-mtr-tower_wp.json
+   ✓ Instant upload via API
+
+📌 METHOD C: MANUAL COPY-PASTE (No plugins)
+   1. Open: wp_uploads/aluminium-extention-stick-3-mtr-tower_wp_manual.html
+   2. Copy product info
+   3. Paste into WordPress product editor
+   4. Click "Publish"
+   ✓ Fields pre-filled and formatted
+
+═════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ 📊 COMPLETE WORKFLOW (3 steps)
+└─────────────────────────────────────────────────────────────────────────────
+
+STEP 1: SCRAPE                 STEP 2: CONVERT              STEP 3: UPLOAD
+└─────────────────────────────────────────────────────────────────────────┐
+ node scrape_fepy_     node fepy_bulk_upload.    WordPress Admin OR
+ complete.js      →    js                    →    API / Manual Entry
+
+ Extracts:            Generates:               Creates:
+ • Title              • JSON format            • Product page
+ • Price              • CSV format             • Product gallery
+ • Images             • HTML format            • Specs tab
+ • Specs              • Attribute mapping      • Features tab
+ • Tabs               • Variation data         • FAQ tab
+ • Features           • SEO metadata           • Attributes
+
+     ~30sec              ~5sec                   ~1min
+└──────────────────────────────────────────────────────────────────────────┘
+
+═════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ 🎯 WHAT GETS FILLED IN WORDPRESS PRODUCT DETAILS TAB
+└─────────────────────────────────────────────────────────────────────────────
+
+✅ BASIC INFO
+   Title, SKU, Price, Brand, Category
+
+✅ DESCRIPTIONS
+   Short Description, Long Description, Meta Description
+
+✅ MEDIA
+   Featured Image, Gallery Images (up to 6)
+
+✅ SPECIFICATIONS
+   Size, Weight, Dimensions, Material, etc.
+
+✅ ATTRIBUTES
+   Color, Size, Variant, etc. (with variations)
+
+✅ PRODUCT TABS (Formatted HTML)
+   📄 Features & Benefits
+   📋 Key Specifications
+   🎯 Applications
+   ❓ FAQ
+   💯 Suitable For
+   📦 Estimating & Supply
+   📎 Attachments
+   ⭐ Ratings & Reviews
+
+✅ SEO
+   Meta Description, Focus Keywords, OG Tags, Slug
+
+═════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ 📂 FILE LOCATIONS
+└─────────────────────────────────────────────────────────────────────────────
+
+SCRAPED DATA:
+  scraped_data/fepy_products/
+  ├── aluminium-extention-stick-3-mtr-tower.json (Clean)
+  └── aluminium-extention-stick-3-mtr-tower_full.json (Raw)
+
+UPLOAD READY:
+  wp_uploads/
+  ├── aluminium-extention-stick-3-mtr-tower_wp.json (JSON)
+  ├── aluminium-extention-stick-3-mtr-tower_wp_manual.html (HTML)
+  └── fepy_products_bulk_import.csv (CSV)
+
+═════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ 🔧 CUSTOMIZE
+└─────────────────────────────────────────────────────────────────────────────
+
+CHANGE FEPY URL:
+  Edit scrape_fepy_complete.js
+  Line 14: const FEPY_URL = 'https://www.fepy.com/YOUR-PRODUCT';
+
+CHANGE UPLOAD LOCATION:
+  Edit fepy_bulk_upload.js
+  Line 15: const uploadDir = 'your/custom/path';
+
+CHANGE STOCK QUANTITY:
+  Edit fepy_upload_handler.js
+  Line 104: stock_quantity: 999, // ← Change this
+
+═════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ ✅ CHECKLIST
+└─────────────────────────────────────────────────────────────────────────────
+
+ ☐ Run scraper: node scrape_fepy_complete.js
+ ☐ Check output in: scraped_data/fepy_products/
+ ☐ Run converter: node fepy_bulk_upload.js
+ ☐ Check files in: wp_uploads/
+ ☐ Choose upload method
+ ☐ Upload to WordPress
+ ☐ Verify product appears in store
+ ☐ Check all tabs display correctly
+
+═════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────
+│ ❌ TROUBLESHOOTING
+└─────────────────────────────────────────────────────────────────────────────
+
+ISSUE: "Cannot find module scraper/fepy"
+FIX: npm install puppeteer-extra puppeteer-extra-plugin-stealth
+
+ISSUE: Browser won't launch
+FIX: Add to command: node --no-sandbox scrape_fepy_complete.js
+
+ISSUE: CSV won't import
+FIX: Ensure UTF-8 encoding, comma-separated, try JSON method instead
+
+ISSUE: Images not showing
+FIX: Check that local image paths are correct in wp_uploads/
+
+ISSUE: No data extracted
+FIX: Verify FEPY site structure hasn't changed, check browser console
+
+═════════════════════════════════════════════════════════════════════════════
+
+⚠️  IMPORTANT NOTES:
+
+  🔒 FEPY ONLY - No changes to FOSROC scraper
+  📦 All images downloaded locally to scraped_data/fepy_products/
+  ✨ Tab content formatted as HTML (ready for WordPress)
+  🔄 Can re-run anytime without side effects
+  💾 JSON files can be manually edited before upload
+
+═════════════════════════════════════════════════════════════════════════════
+
+For detailed documentation, see: FEPY_SCRAPER_README.md
+
+═════════════════════════════════════════════════════════════════════════════

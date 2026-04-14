@@ -1,0 +1,589 @@
+﻿/**
+ * Pilehead Product Tabs - Premium Design Stylesheet
+ * Version: 2.1.0
+ */
+
+/* ============================================
+   HIDE THEME TAB SYSTEM (replaced by plugin)
+   ============================================ */
+
+.ph-tabs-section {
+  display: none !important;
+}
+
+/* ============================================
+   VARIABLES & ROOT
+   ============================================ */
+
+.pilehead-product-tabs {
+  --ph-accent:       #c8913f;
+  --ph-accent-light: #f5e9d8;
+  --ph-accent-dark:  #a07030;
+  --ph-text:         #1a1a2e;
+  --ph-text-muted:   #5a6072;
+  --ph-text-light:   #8a92a6;
+  --ph-bg:           #ffffff;
+  --ph-bg-soft:      #f8f9fb;
+  --ph-border:       #e8eaef;
+  --ph-radius:       14px;
+  --ph-shadow:       0 4px 24px rgba(0,0,0,0.07);
+  --ph-font:         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ============================================
+   WRAPPER
+   ============================================ */
+
+.pilehead-product-tabs {
+  background: var(--ph-bg);
+  border-radius: var(--ph-radius);
+  box-shadow: var(--ph-shadow);
+  border: 1px solid var(--ph-border);
+  margin: 36px 0;
+  font-family: var(--ph-font);
+  overflow: hidden;
+}
+
+/* ============================================
+   TAB NAVIGATION
+   ============================================ */
+
+.pilehead-tabs-nav {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  background: var(--ph-bg-soft);
+  border-bottom: 2px solid var(--ph-border);
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pilehead-tabs-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.pilehead-tab-btn {
+  position: relative;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  color: var(--ph-text-muted);
+  padding: 16px 22px 14px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  font-family: var(--ph-font);
+  outline: none;
+}
+
+.pilehead-tab-btn:hover {
+  color: var(--ph-text);
+  background: rgba(200, 145, 63, 0.06);
+}
+
+.pilehead-tab-btn.active {
+  color: var(--ph-accent);
+  border-bottom-color: var(--ph-accent);
+  font-weight: 600;
+}
+
+.pilehead-tab-btn:focus-visible {
+  outline: 2px solid var(--ph-accent);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* ============================================
+   TAB CONTENT AREA
+   ============================================ */
+
+.pilehead-tabs-content {
+  padding: 36px 40px;
+}
+
+.pilehead-tab-pane {
+  display: none;
+  color: var(--ph-text);
+  font-size: 15px;
+  line-height: 1.85;
+  animation: phFadeIn 0.3s ease forwards;
+}
+
+.pilehead-tab-pane.active {
+  display: block;
+}
+
+@keyframes phFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+
+.pilehead-tab-pane h1,
+.pilehead-tab-pane h2,
+.pilehead-tab-pane h3,
+.pilehead-tab-pane h4,
+.pilehead-tab-pane h5 {
+  font-family: var(--ph-font);
+  line-height: 1.35;
+  margin: 28px 0 12px;
+  color: var(--ph-text);
+}
+
+.pilehead-tab-pane h2 {
+  font-size: 22px;
+  font-weight: 700;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--ph-accent-light);
+}
+
+.pilehead-tab-pane h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ph-accent-dark);
+}
+
+.pilehead-tab-pane h4 {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.pilehead-tab-pane p {
+  color: var(--ph-text-muted);
+  margin: 10px 0 16px;
+  line-height: 1.85;
+}
+
+.pilehead-tab-pane strong,
+.pilehead-tab-pane b {
+  color: var(--ph-text);
+  font-weight: 600;
+}
+
+.pilehead-tab-pane a {
+  color: var(--ph-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ph-accent-light);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.pilehead-tab-pane a:hover {
+  color: var(--ph-accent-dark);
+  border-bottom-color: var(--ph-accent);
+}
+
+/* ============================================
+   LISTS
+   ============================================ */
+
+.pilehead-tab-pane ul,
+.pilehead-tab-pane ol {
+  padding-left: 0;
+  margin: 12px 0 20px;
+  list-style: none;
+}
+
+.pilehead-tab-pane ul li,
+.pilehead-tab-pane ol li {
+  position: relative;
+  padding: 7px 0 7px 28px;
+  color: var(--ph-text-muted);
+  line-height: 1.7;
+  border-bottom: 1px solid var(--ph-bg-soft);
+}
+
+.pilehead-tab-pane ul li:last-child,
+.pilehead-tab-pane ol li:last-child {
+  border-bottom: none;
+}
+
+.pilehead-tab-pane ul li::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 15px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ph-accent);
+  opacity: 0.8;
+}
+
+.pilehead-tab-pane ol {
+  counter-reset: ph-counter;
+}
+
+.pilehead-tab-pane ol li {
+  counter-increment: ph-counter;
+}
+
+.pilehead-tab-pane ol li::before {
+  content: counter(ph-counter);
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 20px;
+  height: 20px;
+  background: var(--ph-accent);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================
+   TABLES (Specifications)
+   ============================================ */
+
+.pilehead-tab-pane table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--ph-border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 20px 0;
+  font-size: 14px;
+}
+
+.pilehead-tab-pane table thead tr {
+  background: var(--ph-text);
+}
+
+.pilehead-tab-pane table th {
+  padding: 14px 20px;
+  text-align: left;
+  color: #fff;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pilehead-tab-pane table tbody tr {
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--ph-border);
+}
+
+.pilehead-tab-pane table tbody tr:nth-child(even) {
+  background: var(--ph-bg-soft);
+}
+
+.pilehead-tab-pane table tbody tr:hover {
+  background: var(--ph-accent-light);
+}
+
+.pilehead-tab-pane table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.pilehead-tab-pane table td {
+  padding: 13px 20px;
+  color: var(--ph-text-muted);
+}
+
+.pilehead-tab-pane table td:first-child {
+  font-weight: 600;
+  color: var(--ph-text);
+  width: 38%;
+}
+
+/* ============================================
+   FEATURE BOXES
+   ============================================ */
+
+.pilehead-feature-box {
+  background: var(--ph-bg-soft);
+  padding: 20px 24px;
+  border-radius: 10px;
+  border-left: 4px solid var(--ph-accent);
+  margin-bottom: 14px;
+  transition: box-shadow 0.25s, transform 0.25s;
+}
+
+.pilehead-feature-box:hover {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+
+.pilehead-feature-box h3 {
+  color: var(--ph-accent-dark) !important;
+  margin: 0 0 8px !important;
+  font-size: 17px !important;
+}
+
+.pilehead-feature-box p {
+  margin: 0 !important;
+}
+
+.pilehead-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+
+/* ============================================
+   FAQ
+   ============================================ */
+
+.pilehead-faq-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.pilehead-faq-item {
+  background: var(--ph-bg-soft);
+  border: 1px solid var(--ph-border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pilehead-faq-item:hover {
+  border-color: var(--ph-accent);
+  box-shadow: 0 4px 14px rgba(200,145,63,0.1);
+}
+
+.pilehead-faq-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.pilehead-faq-badge {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  background: var(--ph-accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pilehead-faq-question {
+  color: var(--ph-text);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pilehead-faq-answer {
+  color: var(--ph-text-muted);
+  margin: 0;
+  padding-left: 42px;
+  line-height: 1.8;
+}
+
+/* ============================================
+   APPLICATION / DELIVERY CARDS
+   ============================================ */
+
+.pilehead-app-card,
+.pilehead-delivery-card {
+  background: #eef6ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 14px;
+}
+
+.pilehead-app-card h3,
+.pilehead-delivery-card h3 { color: #1d4ed8 !important; margin: 0 0 8px !important; }
+.pilehead-app-card p,
+.pilehead-delivery-card p  { color: #1e3a8a; margin: 0 !important; }
+
+.pilehead-app-card-success,
+.pilehead-delivery-card-success { background: #ecfdf5; border-left-color: #10b981; }
+.pilehead-app-card-success h3,
+.pilehead-delivery-card-success h3 { color: #065f46 !important; }
+
+.pilehead-app-card-warning,
+.pilehead-delivery-card-warning { background: #fefce8; border-left-color: #f59e0b; }
+.pilehead-app-card-warning h3,
+.pilehead-delivery-card-warning h3 { color: #92400e !important; }
+
+/* ============================================
+   REVIEW CARDS
+   ============================================ */
+
+.pilehead-review-card {
+  background: var(--ph-bg);
+  border: 1px solid var(--ph-border);
+  border-radius: 12px;
+  padding: 22px 26px;
+  margin-bottom: 14px;
+  transition: box-shadow 0.25s, transform 0.25s;
+}
+
+.pilehead-review-card:hover {
+  box-shadow: 0 8px 22px rgba(0,0,0,0.09);
+  transform: translateY(-3px);
+}
+
+.pilehead-review-rating { color: #f59e0b; font-size: 17px; margin-bottom: 10px; }
+.pilehead-review-rating-label { color: var(--ph-text-light); font-size: 13px; margin-left: 6px; }
+.pilehead-review-text {
+  color: var(--ph-text-muted);
+  font-style: italic;
+  margin: 12px 0;
+  line-height: 1.85;
+  border-left: 3px solid var(--ph-accent-light);
+  padding-left: 16px;
+}
+.pilehead-review-author { color: var(--ph-text-light); font-size: 13px; }
+.pilehead-review-author strong { color: var(--ph-text); font-weight: 600; }
+
+/* ============================================
+   IMAGES
+   ============================================ */
+
+.pilehead-tab-pane img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 20px 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.09);
+  display: block;
+}
+
+/* ============================================
+   DIVIDER & HIGHLIGHT
+   ============================================ */
+
+.pilehead-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--ph-accent-light), transparent);
+  margin: 28px 0;
+  border: none;
+}
+
+.pilehead-highlight {
+  background: var(--ph-accent-light);
+  border-left: 4px solid var(--ph-accent);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px 0;
+}
+
+.pilehead-highlight p { margin: 0 !important; color: var(--ph-text); font-weight: 500; }
+
+/* ============================================
+   RANK MATH TOC
+   Handles both Rank Math auto-TOC (nav>ul) and
+   seoPush buildToc() output (nav>p + ol).
+   ============================================ */
+
+#rank-math-toc.rank-math-toc {
+  background: var(--ph-bg-soft);
+  padding: 22px 26px;
+  border-left: 4px solid var(--ph-accent);
+  margin: 24px 0;
+  border-radius: 8px;
+  border: 1px solid var(--ph-border);
+}
+
+/* Rank Math auto-generated heading */
+#rank-math-toc.rank-math-toc h2 {
+  margin: 0 0 14px !important;
+  font-size: 18px !important;
+  font-weight: 700;
+  color: var(--ph-text) !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* buildToc() uses <p> as the title */
+#rank-math-toc.rank-math-toc > p {
+  margin: 0 0 12px !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  color: var(--ph-text-light) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* Rank Math nav>ul */
+#rank-math-toc.rank-math-toc nav ul { list-style: none; padding: 0; margin: 0; }
+#rank-math-toc.rank-math-toc nav ul li { margin: 8px 0; border-bottom: none; padding-left: 0; }
+#rank-math-toc.rank-math-toc nav ul li::before { display: none; }
+
+/* buildToc() direct ol inside the nav */
+#rank-math-toc.rank-math-toc > ol {
+  list-style: decimal;
+  padding-left: 18px;
+  margin: 0;
+}
+#rank-math-toc.rank-math-toc > ol > li {
+  margin: 6px 0;
+  border-bottom: none;
+  padding-left: 4px;
+  line-height: 1.9;
+  font-size: 14px;
+  color: var(--ph-text-muted);
+}
+#rank-math-toc.rank-math-toc > ol > li::before { display: none; }
+
+/* Links — both systems */
+#rank-math-toc.rank-math-toc a {
+  color: var(--ph-accent);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  border-bottom: none;
+}
+#rank-math-toc.rank-math-toc a:hover { color: var(--ph-accent-dark); }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .pilehead-tabs-nav { padding: 0 12px; }
+  .pilehead-tab-btn { padding: 14px 16px 12px; font-size: 13px; }
+  .pilehead-tabs-content { padding: 24px 20px; }
+  .pilehead-tab-pane h2 { font-size: 20px; }
+  .pilehead-features-grid { grid-template-columns: 1fr; }
+  .pilehead-tab-pane table th,
+  .pilehead-tab-pane table td { padding: 11px 14px; }
+  .pilehead-tab-pane table td:first-child { width: auto; }
+}
+
+@media (max-width: 520px) {
+  .pilehead-tabs-nav { padding: 0 6px; }
+  .pilehead-tab-btn { padding: 12px 10px 10px; font-size: 12px; }
+  .pilehead-tabs-content { padding: 18px 14px; }
+  .pilehead-faq-answer { padding-left: 0; margin-top: 8px; }
+}
+
+/* ============================================
+   PRINT
+   ============================================ */
+
+@media print {
+  .pilehead-tabs-nav { display: none; }
+  .pilehead-tabs-content { padding: 0; }
+  .pilehead-tab-pane { display: block !important; page-break-inside: avoid; }
+  .pilehead-product-tabs { box-shadow: none; border: none; }
+}

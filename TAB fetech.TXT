@@ -1,0 +1,777 @@
+</**
+ * scrape-product-details.js
+ * ─────────────────────────
+ * Complete product scraper with 3-layer extraction:
+ *   Layer 1 → JSON-LD structured data  (most reliable)
+ *   Layer 2 → Open Graph / meta tags   (broad coverage)
+ *   Layer 3 → DOM heuristics           (fallback / enrichment)
+ *
+ * Usage in Electron main process:
+ *   const { scrapeProductDetails } = require('./scrape-product-details');
+ *   ipcMain.handle('scrape-fepy-product-details', async (_, { url }) => {
+ *     return await scrapeProductDetails(url);
+ *   });
+ */
+
+'use strict';
+
+const https = require('https');
+const http  = require('http');
+const { URL } = require('url');
+
+// ─── tiny HTML parser helpers (no external deps) ─────────────────────────────
+
+/** Extract all tag occurrences that match a pattern */
+function findTags(html, tag) {
+  const results = [];
+  const openRe  = new RegExp(`<${tag}(\\s[^>]*)?>`, 'gi');
+  const closeRe = new RegExp(`<\\/${tag}>`, 'gi');
+  let match;
+  while ((match = openRe.exec(html)) !== null) {
+    const start   = match.index + match[0].length;
+    closeRe.lastIndex = start;
+    const end     = closeRe.exec(html);
+    const inner   = end ? html.slice(start, end.index) : '';
+    results.push({ attrs: match[1] || '', inner: inner.trim() });
+  }
+  return results;
+}
+
+/** Get the value of an HTML attribute */
+function attr(attrsStr, name) {
+  const re = new RegExp(`${name}\\s*=\\s*(?:"([^"]*?)"|'([^']*?)'|([^\\s>]+))`, 'i');
+  const m  = re.exec(attrsStr);
+  return m ? (m[1] ?? m[2] ?? m[3] ?? '') : '';
+}
+
+/** Decode common HTML entities */
+function decodeEntities(str) {
+  if (!str) return '';
+  return str
+    .replace(/&amp;/g,  '&')
+    .replace(/&lt;/g,   '<')
+    .replace(/&gt;/g,   '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g,  "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+/** Strip all HTML tags from a string */
+function stripTags(str) {
+  return decodeEntities((str || '').replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim());
+}
+
+/** Find the first regex match or return '' */
+function firstMatch(html, re) {
+  const m = re.exec(html);
+  return m ? (m[1] ?? '').trim() : '';
+}
+
+// ─── HTTP fetch with redirects ────────────────────────────────────────────────
+
+const DEFAULT_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
+    'AppleWebKit/537.36 (KHTML, like Gecko) ' +
+    'Chrome/124.0.0.0 Safari/537.36',
+  'Accept':
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'identity',       // avoid gzip so we get plain text
+  'Cache-Control':   'no-cache',
+  'Pragma':          'no-cache',
+};
+
+function fetchURL(url, redirectsLeft = 5) {
+  return new Promise((resolve, reject) => {
+    const parsed  = new URL(url);
+    const lib     = parsed.protocol === 'https:' ? https : http;
+    const options = {
+      hostname: parsed.hostname,
+      port:     parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      path:     parsed.pathname + parsed.search,
+      method:   'GET',
+      headers:  { ...DEFAULT_HEADERS, Host: parsed.hostname },
+      timeout:  15000,
+    };
+
+    const req = lib.request(options, (res) => {
+      const { statusCode, headers } = res;
+
+      // Follow redirects
+      if ([301, 302, 303, 307, 308].includes(statusCode) && headers.location && redirectsLeft > 0) {
+        res.resume();
+        const next = headers.location.startsWith('http')
+          ? headers.location
+          : `${parsed.origin}${headers.location}`;
+        return resolve(fetchURL(next, redirectsLeft - 1));
+      }
+
+      if (statusCode < 200 || statusCode >= 400) {
+        res.resume();
+        return reject(new Error(`HTTP ${statusCode} for ${url}`));
+      }
+
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end',  () => resolve(Buffer.concat(chunks).toString('utf8')));
+      res.on('error', reject);
+    });
+
+    req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout fetching ${url}`)); });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+// ─── Layer 1: JSON-LD ─────────────────────────────────────────────────────────
+
+function parseJsonLd(html) {
+  const scripts = findTags(html, 'script');
+  const candidates = [];
+
+  for (const { attrs, inner } of scripts) {
+    if (!/application\/ld\+json/i.test(attrs)) continue;
+    try {
+      const parsed = JSON.parse(inner.replace(/<!--[\s\S]*?-->/g, ''));
+      const items  = Array.isArray(parsed) ? parsed : [parsed];
+      for (const item of items) {
+        // Unwrap @graph arrays
+        if (item['@graph']) {
+          for (const g of item['@graph']) candidates.push(g);
+        } else {
+          candidates.push(item);
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Find the Product node
+  const product = candidates.find(
+    (c) => c && /Product|IndividualProduct/i.test(String(c['@type'] || ''))
+  );
+  if (!product) return null;
+
+  // Resolve offers (may be an array)
+  const offerRaw  = product.offers || product.Offers;
+  const offerList = offerRaw
+    ? (Array.isArray(offerRaw) ? offerRaw : [offerRaw])
+    : [];
+  const offer     = offerList[0] || {};
+
+  // Helper: first truthy value in offer then product
+  const pick = (...paths) => {
+    for (const p of paths) {
+      const parts = p.split('.');
+      let val = product;
+      for (const part of parts) val = val?.[part];
+      if (val && typeof val !== 'object') return String(val);
+    }
+    // Also search in offer
+    for (const p of paths) {
+      const parts = p.split('.');
+      let val = offer;
+      for (const part of parts) val = val?.[part];
+      if (val && typeof val !== 'object') return String(val);
+    }
+    return '';
+  };
+
+  // Images
+  const rawImages = product.image || product.images || [];
+  const images = (Array.isArray(rawImages) ? rawImages : [rawImages])
+    .map((img) => (typeof img === 'string' ? img : img?.url || img?.contentUrl || ''))
+    .filter(Boolean);
+
+  // Aggregate ratings
+  const ratingObj = product.aggregateRating || {};
+
+  // Additional property specs
+  const specMap = {};
+  const addProps = product.additionalProperty || [];
+  for (const p of (Array.isArray(addProps) ? addProps : [])) {
+    if (p.name && p.value != null) specMap[p.name] = String(p.value);
+  }
+
+  // Feature bullets from description list items
+  const features = [];
+  if (Array.isArray(product.description)) {
+    features.push(...product.description);
+  }
+
+  return {
+    title:           pick('name'),
+    brand:           pick('brand.name', 'brand'),
+    description:     typeof product.description === 'string' ? product.description : '',
+    sku:             pick('sku', 'mpn', 'productID', 'identifier'),
+    mpn:             pick('mpn'),
+    gtin:            pick('gtin14', 'gtin13', 'gtin12', 'gtin8', 'gtin'),
+    barcode:         pick('gtin', 'gtin13', 'gtin12'),
+    category:        pick('category'),
+    color:           pick('color'),
+    material:        pick('material'),
+    condition:       pick('itemCondition').replace(/.*\//,'') || '',
+    weight:          pick('weight.value') ? `${pick('weight.value')} ${pick('weight.unitCode')}` : '',
+    price:           pick('price', 'lowPrice'),
+    salePrice:       offer.priceSpecification?.price || '',
+    currency:        pick('priceCurrency'),
+    availability:    pick('availability').replace(/.*\//,'') || '',
+    warranty:        pick('warranty.durationOfWarranty') || '',
+    images,
+    rating:          ratingObj.ratingValue ? String(ratingObj.ratingValue) : '',
+    reviewCount:     ratingObj.reviewCount || ratingObj.ratingCount || '',
+    specifications:  specMap,
+    features,
+    _source: 'json-ld',
+  };
+}
+
+// ─── Layer 2: Meta / Open Graph ───────────────────────────────────────────────
+
+function parseMetaTags(html) {
+  const data = {};
+  const metas = findTags(html, 'meta');
+
+  for (const { attrs } of metas) {
+    const prop    = (attr(attrs, 'property') || attr(attrs, 'name')).toLowerCase();
+    const content = decodeEntities(attr(attrs, 'content'));
+    if (!content) continue;
+
+    switch (prop) {
+      case 'og:title':               data.title        = data.title        || content; break;
+      case 'og:description':         data.description  = data.description  || content; break;
+      case 'og:image':               (data.images = data.images || []).push(content);   break;
+      case 'og:price:amount':
+      case 'product:price:amount':   data.price        = data.price        || content; break;
+      case 'og:price:currency':
+      case 'product:price:currency': data.currency     = data.currency     || content; break;
+      case 'product:brand':          data.brand        = data.brand        || content; break;
+      case 'product:retailer_item_id': data.sku        = data.sku          || content; break;
+      case 'product:availability':   data.availability = data.availability || content; break;
+      case 'product:condition':      data.condition    = data.condition    || content; break;
+      case 'product:category':       data.category     = data.category     || content; break;
+      case 'description':
+      case 'twitter:description':    data.description  = data.description  || content; break;
+      case 'twitter:image':          (data.images = data.images || []).push(content);   break;
+      case 'twitter:title':          data.title        = data.title        || content; break;
+    }
+  }
+
+  // <title> fallback
+  if (!data.title) {
+    const t = firstMatch(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (t) data.title = stripTags(t).split(/[|\-–—]/)[0].trim();
+  }
+
+  data._source = 'meta';
+  return data;
+}
+
+// ─── Layer 3: DOM Heuristics ──────────────────────────────────────────────────
+
+/** Patterns for common e-commerce platforms */
+const PRICE_PATTERNS = [
+  /class="[^"]*(?:price|Price|amount|Amount)[^"]*"[^>]*>\s*<[^>]+>\s*([\$€£¥₹₩]?\s?[\d,]+\.?\d*)/i,
+  /class="[^"]*(?:price|Price|amount|Amount)[^"]*"[^>]*>\s*([\$€£¥₹₩]\s?[\d,]+\.?\d*)/i,
+  /"price"\s*:\s*"?([\d.]+)"?/i,
+  /"price"\s*content="([^"]+)"/i,
+  /itemprop="price"\s+content="([^"]+)"/i,
+  /data-price="([^"]+)"/i,
+];
+
+const TITLE_PATTERNS = [
+  /<h1[^>]*>([\s\S]*?)<\/h1>/i,
+  /itemprop="name"[^>]*>([\s\S]*?)<\//i,
+];
+
+const BRAND_PATTERNS = [
+  /itemprop="brand"[^>]*>\s*<[^>]+[^>]*>([\s\S]*?)<\//i,
+  /class="[^"]*brand[^"]*"[^>]*>([\s\S]*?)<\//i,
+  /data-brand="([^"]+)"/i,
+];
+
+const SKU_PATTERNS = [
+  /itemprop="sku"[^>]*content="([^"]+)"/i,
+  /itemprop="sku"[^>]*>([\s\S]*?)<\//i,
+  /class="[^"]*sku[^"]*"[^>]*>(?:[\s\S]*?SKU:?\s*)?([\w\-]+)/i,
+  /data-sku="([^"]+)"/i,
+  /"sku"\s*:\s*"([^"]+)"/i,
+];
+
+const RATING_PATTERNS = [
+  /itemprop="ratingValue"[^>]*content="([^"]+)"/i,
+  /itemprop="ratingValue"[^>]*>([\s\S]*?)<\//i,
+  /class="[^"]*rating[^"]*"[^>]*data-score="([^"]+)"/i,
+  /"ratingValue"\s*:\s*"?([0-9.]+)"?/i,
+];
+
+const REVIEW_COUNT_PATTERNS = [
+  /itemprop="reviewCount"[^>]*content="([^"]+)"/i,
+  /itemprop="reviewCount"[^>]*>([\s\S]*?)<\//i,
+  /"reviewCount"\s*:\s*(\d+)/i,
+];
+
+const AVAILABILITY_PATTERNS = [
+  /itemprop="availability"[^>]*(?:content|href)="([^"]+)"/i,
+  /class="[^"]*(?:availability|stock)[^"]*"[^>]*>([\s\S]*?)<\//i,
+  /"availability"\s*:\s*"([^"]+)"/i,
+];
+
+function tryPatterns(html, patterns) {
+  for (const re of patterns) {
+    const m = re.exec(html);
+    if (m && m[1]) return stripTags(m[1]).trim();
+  }
+  return '';
+}
+
+/** Extract product images from DOM */
+function extractImages(html, baseUrl) {
+  const images = new Set();
+  // Gallery / product image selectors via data attributes
+  const dataImgRe = /data-(?:zoom-image|large-src|full-src|src|image)="(https?:\/\/[^"]+)"/gi;
+  let m;
+  while ((m = dataImgRe.exec(html)) !== null) images.add(m[1]);
+
+  // <img> tags with product-like class names
+  const imgTags = findTags(html, 'img');
+  for (const { attrs } of imgTags) {
+    const cls  = attr(attrs, 'class').toLowerCase();
+    const src  = attr(attrs, 'src') || attr(attrs, 'data-src') || attr(attrs, 'data-lazy-src');
+    if (!src) continue;
+    if (/product|gallery|zoom|main|primary|featured|slider/i.test(cls)) {
+      const abs = toAbsoluteUrl(src, baseUrl);
+      if (abs) images.add(abs);
+    }
+  }
+
+  // og:image already handled in meta layer; add srcset candidates
+  const srcsetRe = /srcset="([^"]+)"/gi;
+  while ((m = srcsetRe.exec(html)) !== null) {
+    const parts = m[1].split(',').map((p) => p.trim().split(/\s+/)[0]);
+    for (const p of parts) {
+      if (/product|gallery|zoom/i.test(p)) {
+        const abs = toAbsoluteUrl(p, baseUrl);
+        if (abs) images.add(abs);
+      }
+    }
+  }
+
+  return [...images].filter((u) => /\.(jpe?g|png|webp|gif)(\?.*)?$/i.test(u));
+}
+
+/** Extract spec table rows */
+function extractSpecTable(html) {
+  const specs = {};
+  // <table> rows with two cells
+  const tables = findTags(html, 'table');
+  for (const { attrs, inner } of tables) {
+    if (!/spec|detail|attribute|feature|technical|info/i.test(attrs + inner.slice(0, 200))) continue;
+    const rows = findTags(inner, 'tr');
+    for (const { inner: rowHtml } of rows) {
+      const cells = findTags(rowHtml, 'td');
+      if (cells.length >= 2) {
+        const key = stripTags(cells[0].inner);
+        const val = stripTags(cells[1].inner);
+        if (key && val && key.length < 60) specs[key] = val;
+      }
+      // Also handle <th>/<td> combos
+      const th = findTags(rowHtml, 'th');
+      if (th.length === 1 && cells.length === 1) {
+        const key = stripTags(th[0].inner);
+        const val = stripTags(cells[0].inner);
+        if (key && val && key.length < 60) specs[key] = val;
+      }
+    }
+  }
+
+  // Definition lists <dl><dt>/<dd>
+  const dls = findTags(html, 'dl');
+  for (const { inner: dlHtml } of dls) {
+    const dts = findTags(dlHtml, 'dt').map((d) => stripTags(d.inner));
+    const dds = findTags(dlHtml, 'dd').map((d) => stripTags(d.inner));
+    dts.forEach((k, i) => { if (k && dds[i]) specs[k] = dds[i]; });
+  }
+
+  return specs;
+}
+
+/** Extract bullet-point feature list */
+function extractFeatures(html) {
+  const features = [];
+  // Look for ULs inside containers that suggest a feature/highlight list
+  const containers = findTags(html, 'div').concat(findTags(html, 'section'));
+  for (const { attrs, inner } of containers) {
+    if (!/feature|highlight|benefit|key-point|bullet/i.test(attrs)) continue;
+    const lis = findTags(inner, 'li');
+    for (const { inner: liHtml } of lis) {
+      const text = stripTags(liHtml);
+      if (text.length > 5 && text.length < 300) features.push(text);
+    }
+    if (features.length) break;
+  }
+  return features;
+}
+
+/** Extract short description */
+function extractShortDescription(html) {
+  const patterns = [
+    /class="[^"]*(?:short[-_]?desc|product[-_]?summary|product[-_]?excerpt)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|p|section)>/i,
+    /itemprop="description"[^>]*>([\s\S]*?)<\/(?:div|p|span|section)>/i,
+  ];
+  for (const re of patterns) {
+    const m = re.exec(html);
+    if (m) {
+      const text = stripTags(m[1]).trim();
+      if (text.length > 20) return text.slice(0, 500);
+    }
+  }
+  return '';
+}
+
+/** Extract variants: sizes, colors */
+function extractVariants(html) {
+  const sizes  = new Set();
+  const colors = new Set();
+
+  // Select options with size-like labels
+  const selects = findTags(html, 'select');
+  for (const { attrs, inner } of selects) {
+    if (/size|dimension/i.test(attrs)) {
+      for (const { inner: optHtml } of findTags(inner, 'option')) {
+        const t = stripTags(optHtml).trim();
+        if (t && t.length < 20 && !/select|choose/i.test(t)) sizes.add(t);
+      }
+    }
+    if (/colou?r|shade/i.test(attrs)) {
+      for (const { inner: optHtml } of findTags(inner, 'option')) {
+        const t = stripTags(optHtml).trim();
+        if (t && t.length < 30 && !/select|choose/i.test(t)) colors.add(t);
+      }
+    }
+  }
+
+  // Swatch buttons
+  const btns = findTags(html, 'button').concat(findTags(html, 'span'));
+  for (const { attrs } of btns) {
+    const cls = attr(attrs, 'class');
+    if (/color[-_]?swatch|swatch[-_]?color/i.test(cls)) {
+      const title = attr(attrs, 'title') || attr(attrs, 'data-value');
+      if (title) colors.add(title);
+    }
+    if (/size[-_]?swatch|swatch[-_]?size/i.test(cls)) {
+      const title = attr(attrs, 'title') || attr(attrs, 'data-value');
+      if (title) sizes.add(title);
+    }
+  }
+
+  return { sizes: [...sizes], colors: [...colors] };
+}
+
+/** Extract shipping / return policy text */
+function extractPolicy(html, keywords) {
+  for (const kw of keywords) {
+    const re = new RegExp(
+      `class="[^"]*${kw}[^"]*"[^>]*>([\\s\\S]{10,300}?)<\\/(?:div|p|span|li)>`, 'i'
+    );
+    const m = re.exec(html);
+    if (m) return stripTags(m[1]).trim();
+  }
+  return '';
+}
+
+function parseDom(html, baseUrl) {
+  return {
+    title:            stripTags(tryPatterns(html, TITLE_PATTERNS)),
+    price:            tryPatterns(html, PRICE_PATTERNS),
+    brand:            stripTags(tryPatterns(html, BRAND_PATTERNS)),
+    sku:              tryPatterns(html, SKU_PATTERNS),
+    rating:           tryPatterns(html, RATING_PATTERNS),
+    reviewCount:      tryPatterns(html, REVIEW_COUNT_PATTERNS),
+    availability:     stripTags(tryPatterns(html, AVAILABILITY_PATTERNS)),
+    shortDescription: extractShortDescription(html),
+    specifications:   extractSpecTable(html),
+    features:         extractFeatures(html),
+    images:           extractImages(html, baseUrl),
+    ...extractVariants(html),
+    shipping:         extractPolicy(html, ['shipping', 'delivery', 'dispatch']),
+    returnPolicy:     extractPolicy(html, ['return', 'refund', 'exchange']),
+    _source: 'dom',
+  };
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+
+function toAbsoluteUrl(src, base) {
+  if (!src) return '';
+  try {
+    if (/^https?:\/\//i.test(src)) return src;
+    return new URL(src, base).href;
+  } catch (_) { return ''; }
+}
+
+/** Normalize price strings to a clean number string */
+function cleanPrice(raw) {
+  if (!raw) return '';
+  const m = raw.match(/([\d,]+\.?\d*)/);
+  return m ? m[1].replace(/,(?=\d{3})/g, '') : raw.trim();
+}
+
+/** Map availability strings to plain English */
+function cleanAvailability(raw) {
+  if (!raw) return '';
+  if (/instock|in.?stock/i.test(raw))  return 'In Stock';
+  if (/outofstock|out.?of.?stock/i.test(raw)) return 'Out of Stock';
+  if (/preorder|pre.?order/i.test(raw)) return 'Pre-Order';
+  if (/discontinued/i.test(raw))        return 'Discontinued';
+  return raw;
+}
+
+/** Merge extraction layers — earlier layers win on each field */
+function mergeData(layers) {
+  const merged = {};
+  const arrayFields  = new Set(['images', 'features', 'sizes', 'colors']);
+  const objectFields = new Set(['specifications', 'attributes']);
+
+  for (const layer of layers) {
+    for (const [k, v] of Object.entries(layer)) {
+      if (k.startsWith('_')) continue;
+      if (arrayFields.has(k)) {
+        merged[k] = [...new Set([...(merged[k] || []), ...(Array.isArray(v) ? v : [])])];
+      } else if (objectFields.has(k)) {
+        merged[k] = { ...(v || {}), ...(merged[k] || {}) };
+      } else if (!merged[k] && v) {
+        merged[k] = v;
+      }
+    }
+  }
+  return merged;
+}
+
+// ─── HTML Tab Generator ───────────────────────────────────────────────────────
+
+function generateProductTabHTML(data) {
+  const {
+    title = '', brand = '', category = '', price = '', currency = '',
+    salePrice = '', sku = '', mpn = '', gtin = '', availability = '',
+    condition = '', rating = '', reviewCount = '', weight = '',
+    dimensions = '', material = '', color = '', warranty = '',
+    shipping = '', returnPolicy = '', description = '',
+    shortDescription = '', images = [], features = [],
+    specifications = {}, sizes = [], colors = [],
+  } = data;
+
+  const specRows = Object.entries(specifications)
+    .map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`)
+    .join('');
+
+  const featureItems = features
+    .map((f) => `<li>${f}</li>`)
+    .join('');
+
+  const imageGallery = images.slice(0, 6)
+    .map((src) => `<img src="${src}" alt="${title}" loading="lazy" style="width:80px;height:80px;object-fit:cover;border-radius:4px;border:1px solid #eee;">`)
+    .join('');
+
+  const sizeOptions = sizes.length
+    ? `<div class="pt-variants"><strong>Sizes:</strong> ${sizes.map((s) => `<span class="pt-tag">${s}</span>`).join('')}</div>`
+    : '';
+
+  const colorOptions = colors.length
+    ? `<div class="pt-variants"><strong>Colors:</strong> ${colors.map((c) => `<span class="pt-tag">${c}</span>`).join('')}</div>`
+    : '';
+
+  return `
+<style>
+.pt-wrap{font-family:Arial,sans-serif;font-size:14px;color:#333;line-height:1.6;max-width:900px;}
+.pt-wrap h2{font-size:18px;margin:0 0 6px;}
+.pt-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;background:#f9f9f9;padding:12px;border-radius:6px;margin-bottom:14px;}
+.pt-meta-grid .pt-field{display:flex;flex-direction:column;}
+.pt-meta-grid .pt-label{font-size:11px;color:#888;text-transform:uppercase;}
+.pt-meta-grid .pt-value{font-size:13px;font-weight:600;color:#111;}
+.pt-price{font-size:22px;font-weight:700;color:#c0392b;margin-bottom:4px;}
+.pt-sale{font-size:14px;color:#888;text-decoration:line-through;margin-left:8px;}
+.pt-avail{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px;}
+.pt-avail.in-stock{background:#d4edda;color:#155724;}
+.pt-avail.out-stock{background:#f8d7da;color:#721c24;}
+.pt-section{margin-bottom:18px;}
+.pt-section h3{font-size:15px;border-bottom:2px solid #eee;padding-bottom:4px;margin-bottom:10px;}
+.pt-gallery{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.pt-specs-table{width:100%;border-collapse:collapse;font-size:13px;}
+.pt-specs-table th{text-align:left;background:#f4f4f4;padding:6px 10px;width:35%;font-weight:600;border:1px solid #ddd;}
+.pt-specs-table td{padding:6px 10px;border:1px solid #ddd;}
+.pt-specs-table tr:nth-child(even) td{background:#fafafa;}
+.pt-features ul{margin:0;padding-left:18px;}
+.pt-features li{margin-bottom:4px;}
+.pt-tag{display:inline-block;padding:2px 9px;border:1px solid #ccc;border-radius:12px;font-size:12px;margin:2px 3px;}
+.pt-variants{margin-bottom:8px;}
+.pt-policy{font-size:12px;color:#555;background:#f9f9f9;padding:8px 12px;border-left:3px solid #ddd;border-radius:0 4px 4px 0;margin-bottom:6px;}
+@media(max-width:600px){.pt-meta-grid{grid-template-columns:1fr;}}
+</style>
+<div class="pt-wrap">
+  ${title ? `<h2>${title}</h2>` : ''}
+
+  <div class="pt-meta-grid">
+    ${price         ? `<div class="pt-field"><span class="pt-label">Price</span><span class="pt-value pt-price">${currency ? currency + ' ' : ''}${price}${salePrice ? `<span class="pt-sale">${salePrice}</span>` : ''}</span></div>` : ''}
+    ${brand         ? `<div class="pt-field"><span class="pt-label">Brand</span><span class="pt-value">${brand}</span></div>` : ''}
+    ${category      ? `<div class="pt-field"><span class="pt-label">Category</span><span class="pt-value">${category}</span></div>` : ''}
+    ${sku           ? `<div class="pt-field"><span class="pt-label">SKU</span><span class="pt-value">${sku}</span></div>` : ''}
+    ${mpn           ? `<div class="pt-field"><span class="pt-label">MPN</span><span class="pt-value">${mpn}</span></div>` : ''}
+    ${gtin          ? `<div class="pt-field"><span class="pt-label">GTIN / Barcode</span><span class="pt-value">${gtin}</span></div>` : ''}
+    ${condition     ? `<div class="pt-field"><span class="pt-label">Condition</span><span class="pt-value">${condition}</span></div>` : ''}
+    ${color         ? `<div class="pt-field"><span class="pt-label">Color</span><span class="pt-value">${color}</span></div>` : ''}
+    ${material      ? `<div class="pt-field"><span class="pt-label">Material</span><span class="pt-value">${material}</span></div>` : ''}
+    ${weight        ? `<div class="pt-field"><span class="pt-label">Weight</span><span class="pt-value">${weight}</span></div>` : ''}
+    ${dimensions    ? `<div class="pt-field"><span class="pt-label">Dimensions</span><span class="pt-value">${dimensions}</span></div>` : ''}
+    ${rating        ? `<div class="pt-field"><span class="pt-label">Rating</span><span class="pt-value">${rating}/5 ${reviewCount ? `(${reviewCount} reviews)` : ''}</span></div>` : ''}
+  </div>
+
+  ${availability ? `<span class="pt-avail ${/in.?stock/i.test(availability) ? 'in-stock' : 'out-stock'}">${availability}</span>` : ''}
+
+  ${images.length ? `<div class="pt-section"><h3>Images</h3><div class="pt-gallery">${imageGallery}</div></div>` : ''}
+
+  ${shortDescription || description ? `
+  <div class="pt-section">
+    <h3>Description</h3>
+    <p>${shortDescription || description.slice(0, 600)}</p>
+  </div>` : ''}
+
+  ${features.length ? `
+  <div class="pt-section pt-features">
+    <h3>Key Features</h3>
+    <ul>${featureItems}</ul>
+  </div>` : ''}
+
+  ${sizeOptions || colorOptions ? `
+  <div class="pt-section">
+    <h3>Available Options</h3>
+    ${sizeOptions}${colorOptions}
+  </div>` : ''}
+
+  ${specRows ? `
+  <div class="pt-section">
+    <h3>Specifications</h3>
+    <table class="pt-specs-table"><tbody>${specRows}</tbody></table>
+  </div>` : ''}
+
+  ${warranty || shipping || returnPolicy ? `
+  <div class="pt-section">
+    <h3>Policies</h3>
+    ${warranty     ? `<div class="pt-policy"><strong>Warranty:</strong> ${warranty}</div>` : ''}
+    ${shipping     ? `<div class="pt-policy"><strong>Shipping:</strong> ${shipping}</div>` : ''}
+    ${returnPolicy ? `<div class="pt-policy"><strong>Returns:</strong> ${returnPolicy}</div>` : ''}
+  </div>` : ''}
+</div>`.trim();
+}
+
+// ─── Similar product URLs ─────────────────────────────────────────────────────
+
+function extractSimilarUrls(html, baseOrigin) {
+  const urls = new Set();
+  const linkRe = /href="([^"]+)"/gi;
+  let m;
+  while ((m = linkRe.exec(html)) !== null) {
+    const href = m[1];
+    if (/\/(product|item|p|dp|goods|detail|catalog)\/[^"?#]{3,}/i.test(href)) {
+      const abs = toAbsoluteUrl(href, baseOrigin);
+      if (abs && !abs.includes('#')) urls.add(abs);
+    }
+  }
+  return [...urls].slice(0, 20);
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+/**
+ * Scrape complete product details from any e-commerce URL.
+ * @param {string} url  - Full product page URL
+ * @returns {Promise<{success: boolean, data?: object, error?: string}>}
+ */
+async function scrapeProductDetails(url) {
+  try {
+    if (!url || !/^https?:\/\//i.test(url)) {
+      throw new Error('Invalid URL. Must start with http:// or https://');
+    }
+
+    const parsed  = new URL(url);
+    const baseUrl = parsed.origin;
+    const html    = await fetchURL(url);
+
+    // ── Run all three layers ───────────────────────────────────────────────
+    const jsonLdData = parseJsonLd(html)    || {};
+    const metaData   = parseMetaTags(html)  || {};
+    const domData    = parseDom(html, baseUrl);
+
+    // Merge: JSON-LD > Meta > DOM
+    const merged = mergeData([jsonLdData, metaData, domData]);
+
+    // ── Post-process ───────────────────────────────────────────────────────
+    if (merged.price)        merged.price        = cleanPrice(merged.price);
+    if (merged.salePrice)    merged.salePrice     = cleanPrice(merged.salePrice);
+    if (merged.availability) merged.availability  = cleanAvailability(merged.availability);
+    if (merged.condition)    merged.condition     = merged.condition.replace(/https?:\/\/schema\.org\//i, '');
+
+    // Deduplicate & absolutify images
+    merged.images = [...new Set(
+      (merged.images || []).map((src) => toAbsoluteUrl(src, baseUrl)).filter(Boolean)
+    )];
+
+    // Trim long text fields
+    if (merged.description && merged.description.length > 2000) {
+      merged.description = merged.description.slice(0, 2000) + '…';
+    }
+
+    // ── Generate HTML tab ──────────────────────────────────────────────────
+    const productDetailsHTML = generateProductTabHTML(merged);
+
+    // ── Similar products ───────────────────────────────────────────────────
+    const similarUrls = extractSimilarUrls(html, baseUrl);
+
+    // ── Extraction coverage summary ────────────────────────────────────────
+    const coverage = {
+      usedJsonLd:  !!jsonLdData.title,
+      usedMeta:    !!metaData.title,
+      usedDom:     !!domData.title,
+      totalImages: merged.images.length,
+      totalSpecs:  Object.keys(merged.specifications || {}).length,
+      totalFeatures: (merged.features || []).length,
+    };
+
+    return {
+      success: true,
+      data: {
+        ...merged,
+        tabs: { productDetails: productDetailsHTML },
+        similarUrls,
+        _coverage: coverage,
+        _scrapedAt: new Date().toISOString(),
+        _sourceUrl:  url,
+      },
+    };
+
+  } catch (err) {
+    return {
+      success: false,
+      error:   err.message || 'Unknown scraping error',
+    };
+  }
+}
+
+module.exports = { scrapeProductDetails };
+
+// ─── Electron IPC registration helper ────────────────────────────────────────
+/**
+ * Call this in your Electron main process setup:
+ *
+ *   const { registerScrapeIPC } = require('./scrape-product-details');
+ *   registerScrapeIPC(ipcMain);
+ */
+function registerScrapeIPC(ipcMain) {
+  ipcMain.handle('scrape-fepy-product-details', async (_event, { url }) => {
+    return await scrapeProductDetails(url);
+  });
+}
+
+module.exports = { scrapeProductDetails, registerScrapeIPC };

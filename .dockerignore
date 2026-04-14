@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.vscode
+.git
+.sixth
+downloads
+temp_images
+temp_files
+wp_uploads
+scraped_data
+reports
