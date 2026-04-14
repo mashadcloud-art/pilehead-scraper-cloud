@@ -157,13 +157,13 @@ Return ONLY a valid JSON object. Use professional HTML formatting (<ul>, <li>, <
             puppeteerExtra.use(StealthPlugin());
             try {
                 return await puppeteerExtra.launch({
-                    headless: 'new',
+                    headless: true,
                     defaultViewport: null,
                     args: baseArgs
                 });
             } catch (_) {
                 return await puppeteerExtra.launch({
-                    headless: false,
+                    headless: true,
                     defaultViewport: null,
                     args: baseArgs
                 });
@@ -172,13 +172,13 @@ Return ONLY a valid JSON object. Use professional HTML formatting (<ul>, <li>, <
             const puppeteer = require('puppeteer');
             try {
                 return await puppeteer.launch({
-                    headless: 'new',
+                    headless: true,
                     defaultViewport: null,
                     args: baseArgs
                 });
             } catch (_) {
                 return await puppeteer.launch({
-                    headless: false,
+                    headless: true,
                     defaultViewport: null,
                     args: baseArgs
                 });

@@ -74,6 +74,9 @@ app.post('/api/scrape', async (req, res) => {
       try { rawConfig = JSON.parse(fs.readFileSync(configPath, 'utf8') || '{}'); } catch(e){}
   }
 
+  // FORCE headless deployment for Cloud Ubuntu Server (Prevents X11 crash)
+  rawConfig.headless = true;
+
   // Make sure orchestration works
   if (!orchestrator || typeof orchestrator.processSingle !== 'function') {
       try {
