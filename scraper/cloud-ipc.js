@@ -182,7 +182,9 @@ async function handle(channel, data) {
                 return { success: true, data: result };
             }
             case 'media-source-get': {
-                const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'settings.json'), 'utf8'));
+                const username = (data && data._username) ? data._username : 'mashad';
+                const cfgPathObj = path.join(__dirname, '..', 'config', 'profiles', `settings_${username}.json`);
+                const cfg = fs.existsSync(cfgPathObj) ? JSON.parse(fs.readFileSync(cfgPathObj, 'utf8')) : {};
                 const source = (cfg.gcs && cfg.gcs.imageStorage) || 'gcs';
                 const bucket = (cfg.gcs && cfg.gcs.bucket) || '';
                 const saPath = (cfg.gcs && cfg.gcs.serviceAccountPath) || '';
@@ -190,7 +192,8 @@ async function handle(channel, data) {
             }
             case 'media-source-set': {
                 const { source } = data || {};
-                const cfgPath = path.join(__dirname, '..', 'config', 'settings.json');
+                const username = (data && data._username) ? data._username : 'mashad';
+                const cfgPath = path.join(__dirname, '..', 'config', 'profiles', `settings_${username}.json`);
                 const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
                 cfg.gcs = cfg.gcs || {};
                 cfg.gcs.imageStorage = source;

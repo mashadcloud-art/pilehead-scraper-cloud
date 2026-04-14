@@ -25,6 +25,39 @@ app.use(express.json());
 app.use(express.static(__dirname)); 
 
 // 2. Setup your brand new Cloud API Endpoints
+
+const { authenticateToken, JWT_SECRET } = require('./auth');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+// -- LOGIN ROUTE (Unprotected) --
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const usersTable = require('./config/users.json');
+        const user = usersTable[username];
+        if (!user) return res.status(401).json({ success: false, error: 'User not found' });
+        
+        if (bcrypt.compareSync(password, user.passwordHash)) {
+            const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '72h' });
+            return res.json({ success: true, token, username });
+        } else {
+            return res.status(401).json({ success: false, error: 'Invalid password' });
+        }
+    } catch (e) {
+        return res.status(500).json({ success: false, error: 'Database missing or corrupted.' });
+    }
+});
+
+// Guard all other /api/ routes
+app.use('/api', authenticateToken);
+
+// Helper function to resolve dynamic config path
+const getConfigPath = (req) => {
+    const username = req.user && req.user.username ? req.user.username : 'mashad';
+    return path.join(__dirname, 'config', 'profiles', `settings_${username}.json`);
+};
+
 const fs = require('fs');
 
 // We will require your scraper modules here, so the server can run them!
@@ -68,7 +101,7 @@ app.post('/api/scrape', async (req, res) => {
   // Respond immediately so the browser isn't waiting indefinitely
   res.json({ success: true, message: 'Scraping engine has started!' });
 
-  const configPath = path.join(__dirname, 'config', 'settings.json');
+  const configPath = getConfigPath(req);
   let rawConfig = {};
   if (fs.existsSync(configPath)) {
       try { rawConfig = JSON.parse(fs.readFileSync(configPath, 'utf8') || '{}'); } catch(e){}
@@ -137,7 +170,7 @@ app.post('/api/scrape', async (req, res) => {
 // Config API
 app.get('/api/config', (req, res) => {
   try {
-    const configPath = path.join(__dirname, 'config', 'settings.json');
+    const configPath = getConfigPath(req);
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, 'utf8');
       res.json(JSON.parse(data));
@@ -151,7 +184,7 @@ app.get('/api/config', (req, res) => {
 
 app.post('/api/config', (req, res) => {
   try {
-    const configPath = path.join(__dirname, 'config', 'settings.json');
+    const configPath = getConfigPath(req);
     const dir = path.dirname(configPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(configPath, JSON.stringify(req.body, null, 4));
@@ -166,6 +199,7 @@ const cloudIpc = require('./scraper/cloud-ipc');
 app.post('/api/ipc', async (req, res) => {
     try {
         const { channel, data } = req.body;
+        if (req.user) { req.body.data = data || {}; req.body.data._username = req.user.username; }
         const result = await cloudIpc.handle(channel, data);
         res.json(result || { success: true });
     } catch (e) {
@@ -182,6 +216,7 @@ app.get('/api/status', (req, res) => {
 
 // 3. Setup the live 2-way Walkie-Talkie (WebSockets)
 io.on('connection', (socket) => {
+  socket.on('join-room', (username) => { socket.join(username); console.log(socket.id, 'joined room', username); });
   console.log('User connected to live logs:', socket.id);
   
   // Send a welcome log directly to the user's interface
@@ -200,3 +235,4 @@ server.listen(PORT, () => {
   console.log(`🚀 Central API Server is ALIVE on port ${PORT}`);
   console.log(`👉 Open http://localhost:${PORT} in your web browser!`);
 });
+

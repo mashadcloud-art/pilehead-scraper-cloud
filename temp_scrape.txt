@@ -1,0 +1,183 @@
+case 'scrape-url': {
+        const payload = data || {};
+    const url = payload && payload.url ? String(payload.url).trim() : '';
+    if (!url) return { success: false, error: 'missing_url' };
+    const selectedWebsite = payload && payload.selectedWebsite ? payload.selectedWebsite : 'auto';
+    const config = payload && payload.config ? payload.config : {};
+    const autoUpload    = !!(payload && payload.autoUpload);
+    const autoIkUpload  = !!(payload && payload.autoIkUpload);
+    const isFosroc = selectedWebsite === 'fosroc' || (selectedWebsite === 'auto' && /fosroc/i.test(url));
+    // Attach BG removal function at runtime if the config calls for it (never serialised, only lives in memory)
+    if (config && config.gcs && config.gcs.removeBg && bgremove.isAvailable()) {
+        config._removeBgFn = (buf) => bgremove.removeBg(buf);
+    }
+    let browser = null;
+    try {
+        if (isFosroc) {
+            const raw = await fosroc.scrapeProduct(url, config);
+            if (raw && raw.error) throw new Error(raw.error);
+            
+            // MULTI-UPLOAD LOGIC
+            const profiles = (config.wpProfiles || []).length > 0 ? config.wpProfiles : [config.wp];
+            // Filter only valid profiles
+            const activeProfiles = profiles.filter(p => p.url && p.key && p.secret);
+
+            if (autoUpload && activeProfiles.length > 0) {
+                const productData = {
+                    title: raw.title || raw.name || '',
+                    name: raw.name || raw.title || '',
+                    price: raw.price || raw.regular_price || '',
+                    salePrice: raw.salePrice || raw.sale_price || '',
+                    description: raw.description || '',
+                    image: raw.image || raw.mainImage || '',
+                    url,
+                    category: raw.category || '',
+                    localImagePath: raw.localImagePath || '',
+                    galleryImages: Array.isArray(raw.galleryImages) ? raw.galleryImages : (Array.isArray(raw.images) ? raw.images : []),
+                    localGalleryPaths: Array.isArray(raw.localGalleryPaths) ? raw.localGalleryPaths : [],
+                    datasheetUrl: raw.datasheetUrl || '',
+                    localDatasheetPath: raw.localDatasheetPath || '',
+                    datasheets: Array.isArray(raw.datasheets) ? raw.datasheets : [],
+                    documents: Array.isArray(raw.documents) ? raw.documents : [],
+                    tabs: raw.tabs || undefined,
+                    descriptionTabs: raw.tabs || undefined,
+                    source: 'fosroc',
+                    // ── GCS config passed to allow internal uploads
+                    gcs: config.gcs || {}
+                };
+                
+                const wpCreateOpts = config._removeBgFn ? { removeBgFn: config._removeBgFn } : {};
+                const results = [];
+                let firstValidGcsResult = null; // Store GCS result to reuse URLs if needed, or just for IK
+
+                // Upload to each profile sequentially
+                for (const profile of activeProfiles) {
+                    // Respect "autoUpload" per profile if defined (default true if undefined)
+                    if (profile.autoUpload === false) {
+                        console.log(`[Main] Skipping profile "${profile.name}" (autoUpload: false)`);
+                        continue;
+                    }
+
+                    try {
+                        console.log(`[Main] Uploading to profile: ${profile.name} (${profile.url})...`);
+                        const mediaUsername = String(
+                            profile.mediaUsername || profile.wpUsername || profile.username || config?.wordpress?.username || ''
+                        ).trim();
+                        const mediaAppPassword = String(
+                            profile.mediaAppPassword || profile.wpAppPassword || profile.appPassword || config?.wordpress?.appPassword || ''
+                        ).trim();
+                        const profileOpts = { ...wpCreateOpts };
+                        if (mediaUsername && mediaAppPassword) {
+                            profileOpts.mediaAuthHeader = 'Basic ' + Buffer.from(`${mediaUsername}:${mediaAppPassword}`).toString('base64');
+                        }
+
+                        const profileResult = await wordpress.createProduct(profile.url, profile.key, profile.secret, productData, profileOpts);
+                        
+                        // Add context to result for UI
+                        profileResult._profileName = profile.name || 'WP';
+                        profileResult._profileUrl = profile.url;
+
+                        if (profile.url && profile.url.startsWith('http:') && profileResult.permalink && profileResult.permalink.startsWith('https:')) {
+                            profileResult.permalink = profileResult.permalink.replace(/^https:/, 'http:');
+                        }
+
+                        results.push(profileResult);
+
+                        // Capture first GCS result for ImageKit
+                        if (!firstValidGcsResult && profileResult.gcs_images && profileResult.gcs_images.main) {
+                            firstValidGcsResult = profileResult;
+                        }
+
+                    } catch (uploadErr) {
+                         console.error(`[Main] Upload failed for profile "${profile.name}":`, uploadErr.message);
+                         results.push({ 
+                             error: uploadErr.message, 
+                             _profileName: profile.name,
+                             _profileUrl: profile.url 
+                         });
+                    }
+                }
+
+                // ImageKit handling: use the first valid GCS result
+                let ik_images = {};
+                if (autoIkUpload && firstValidGcsResult) {
+                    try {
+                        ik_images = await autoUploadGcsToIK(config, firstValidGcsResult);
+                        // Optional: Write back IK meta to all successful uploads
+                        if (ik_images.main) {
+                            for (const res of results) {
+                                if (res.id && !res.error) {
+                                    // Use fire-and-forget for meta update to avoid slowing down response
+                                    writeWpMeta(res._profileUrl, 
+                                                activeProfiles.find(p => p.url === res._profileUrl).key, 
+                                                activeProfiles.find(p => p.url === res._profileUrl).secret, 
+                                                res.id, 'imagekit_image_url', ik_images.main).catch(console.error);
+                                }
+                            }
+                        }
+                    } catch (ikErr) {
+                        console.error("[Main] ImageKit upload error:", ikErr.message);
+                    }
+                }
+
+                // Fallback for single-upload compatibility
+                const mainResult = results.find(r => !r.error) || results[0] || {};
+                // Include ALL results in the response
+                return { success: true, url, cleaned: raw, uploadResult: mainResult, allUploads: results, ik_images };
+            }
+            return { success: true, url, cleaned: raw, uploadResult: null };
+        }
+        browser = await helpers.launchBrowser();
+        if (autoUpload && config && config.wp && config.wp.url && config.wp.key && config.wp.secret && orchestrator && typeof orchestrator.processSingle === 'function') {
+            const result = await orchestrator.processSingle({
+                url,
+                selectedWebsite,
+                config,
+                browser,
+                scrapeModules: { amazon, noon, fosroc, fepy, karcher, universal }
+            });
+
+            let ik_images = {};
+            // Handle multi-site result (array) or single result (object)
+            const uploadRes = result.uploadResult;
+            const resultsArray = Array.isArray(uploadRes) ? uploadRes : (uploadRes ? [uploadRes] : []);
+            const firstValid = resultsArray.find(r => r && !r.error && r.gcs_images) || resultsArray[0];
+
+            if (autoIkUpload && firstValid) {
+                try {
+                    // Use first valid result for IK upload
+                    ik_images = await autoUploadGcsToIK(config, firstValid);
+                    
+                    // Propagate IK URLs to ALL successful profiles
+                    if (ik_images.main) {
+                         const profiles = (config.wpProfiles || []).length > 0 ? config.wpProfiles : [config.wp];
+                         
+                         for (const res of resultsArray) {
+                            if (res && res.id && !res.error && res._profileUrl) {
+                                 const p = profiles.find(prof => prof && prof.url === res._profileUrl);
+                                 if (p && p.key && p.secret) {
+                                      writeWpMeta(p.url, p.key, p.secret, res.id, 'imagekit_image_url', ik_images.main).catch(console.error);
+                                 }
+                            }
+                         }
+                    }
+                } catch (ikErr) {
+                    console.error("[Main] Orchestrator IK upload error:", ikErr.message);
+                }
+            }
+
+            return { success: true, url, cleaned: result.cleaned, uploadResult: uploadRes, ik_images };
+        }
+        const result = await scrapeProduct(url, selectedWebsite, config, browser);
+        return { success: true, url, cleaned: result.cleaned, uploadResult: null };
+    } catch (error) {
+        return { success: false, error: error.message };
+    } finally {
+        if (browser) {
+            try { await browser.close(); } catch (_) {}
+        }
+    }
+});
+
+/*
+ipcMain.handle('plugin-updater-select-folder', async () => {
