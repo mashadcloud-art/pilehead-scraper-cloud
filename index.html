@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cloud Scraper — Developer Console v1.1.0</title>
+<title>Pilehead — Developer Console v1.1.0</title>
 <!-- Add Socket.io for live logs -->
 <script src="/socket.io/socket.io.js"></script>
 
@@ -967,10 +967,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
    <div style="background:var(--os-bg-2);padding:40px;border-radius:12px;border: 1px solid #ff3b30;box-shadow:0 0 40px rgba(255,59,48,0.2);width:360px;text-align:center;">
        <h1 style="margin-top:0; color:#ff3b30;">⏳ Trial Expired</h1>
        <p style="color:#eee; line-height:1.5;">Your 48-Hour Free Trial has expired. Please contact support to upgrade to a Paid Plan to unlock your scraping dashboard.</p>
-       <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
-           <button onclick="localStorage.removeItem('jwt'); window.location.reload();" style="padding:10px 20px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;">Logout</button>
-           <a href="https://wa.me/971522199617" target="_blank" style="padding:10px 20px;background:#25D366;color:#fff;border:none;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-block;font-weight:bold;">💬 Contact Support on WhatsApp</a>
-       </div>
+       <button onclick="localStorage.removeItem('jwt'); window.location.reload();" style="margin-top:20px;padding:10px 20px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;">Logout</button>
    </div>
 </div>
 
@@ -1012,7 +1009,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
     </div>
     <div class="lp-title-text">
       <div class="lp-live-dot"></div>
-      System Log — Cloud Console
+      System Log — Pilehead Console
     </div>
     <div class="lp-controls">
       <div class="lp-chip active">All</div>
@@ -1043,7 +1040,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
     </div>
     <div class="titlebar-title">
       <div class="titlebar-icon">PH</div>
-      Cloud Scraper Console <span style="font-size: 10px; opacity: 0.6; margin-left: 6px;">v1.1.0</span> <button onclick="localStorage.removeItem('jwt'); window.location.reload();" style="pointer-events:auto;margin-left:auto;padding:5px 12px;background:var(--red);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">Logout</button>
+      Pilehead Developer Console <span style="font-size: 10px; opacity: 0.6; margin-left: 6px;">v1.1.0</span>
     </div>
     <div class="titlebar-right">
       <div class="tb-pill"><div class="tb-dot on"></div>System Online</div>
@@ -1141,7 +1138,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
           <div class="mc-icon-wrap" style="background:rgba(255,255,255,0.06);">+</div>
           <div class="mc-label">More coming</div>
           <div class="mc-title" style="color:var(--fg-4);">Future Module</div>
-          <div class="mc-desc" style="color:var(--fg-4);">Additional modules will be added in future updates to the Cloud Console.</div>
+          <div class="mc-desc" style="color:var(--fg-4);">Additional modules will be added in future updates to the Pilehead console.</div>
           <div class="mc-footer">
             <div class="mc-status soon"><div class="mc-status-dot"></div>Roadmap</div>
           </div>
@@ -1158,7 +1155,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
           <div class="sb-app-row" id="home-btn">
             <div class="sb-app-icon mc-icon-blue" style="width:32px;height:32px;border-radius:8px;font-size:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0055d4,var(--blue));">PH</div>
             <div class="sb-app-info">
-              <div class="sb-app-name">Cloud Console</div>
+              <div class="sb-app-name">Pilehead Console</div>
               <div class="sb-app-sub">v1.1.0 · Local</div>
             </div>
             <div class="sb-home-btn" title="Back to Dashboard">⌂</div>
@@ -1215,7 +1212,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
         <!-- Page toolbar -->
         <div class="page-toolbar">
           <div class="pt-breadcrumb">
-            <span>Cloud Scraper</span>
+            <span>Pilehead</span>
             <span class="sep">›</span>
             <span class="current" id="page-crumb">Scraper</span>
           </div>
@@ -1365,8 +1362,8 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
                   </div>
                   <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px;">
                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--fg-2);">
-                      <input type="checkbox" id="target-cloudscraper" style="width:14px;height:14px;accent-color:var(--blue);">
-                      <span>Primary Domain</span>
+                      <input type="checkbox" id="target-pilehead" style="width:14px;height:14px;accent-color:var(--blue);">
+                      <span>Pilehead Domain</span>
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--fg-2);">
                       <input type="checkbox" id="target-local" style="width:14px;height:14px;accent-color:var(--teal);">
@@ -1382,7 +1379,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
                 <div class="out-row">
                   <div>
                     <div class="out-label">Output File</div>
-                    <div class="out-path">~/myfiles/output/scraped_products.csv</div>
+                    <div class="out-path">~/pilehead/output/scraped_products.csv</div>
                   </div>
                   <div class="action-row" style="margin:0;gap:6px;">
                     <button class="btn btn-default btn-xs" id="preview-btn" style="color:var(--teal);border-color:rgba(90,200,250,0.25);">⊡ Preview</button>
@@ -1443,7 +1440,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
                 <div class="card-title"><div class="card-title-dot" style="background:var(--teal);"></div>Browser Preview</div>
                 <div style="display:flex;gap:5px;">
                   <button class="btn btn-default btn-xs" style="color:var(--teal);border-color:rgba(90,200,250,0.25);">Target Site</button>
-                  <button class="btn btn-default btn-xs">primarysite.com</button>
+                  <button class="btn btn-default btn-xs">pilehead.com</button>
                 </div>
               </div>
               <div class="card-body">
@@ -1747,7 +1744,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
                   </div>
                   <div class="field">
                     <div class="field-label">Destination Folder</div>
-                    <input type="text" id="ik-folder" value="/myfiles" placeholder="/myfiles" style="width:100%;padding:6px 10px;background:var(--bg-3);border:1px solid var(--border);border-radius:6px;color:var(--fg-1);font-size:12px;">
+                    <input type="text" id="ik-folder" value="/pilehead" placeholder="/pilehead" style="width:100%;padding:6px 10px;background:var(--bg-3);border:1px solid var(--border);border-radius:6px;color:var(--fg-1);font-size:12px;">
                   </div>
                 </div>
                 <div class="grid-2" style="margin-bottom:10px;">
@@ -2260,7 +2257,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
 
 <script>
 // ════════════════════════════════════════════════
-//  Cloud Console — WIRED IPC SCRIPT
+//  PILEHEAD CONSOLE — WIRED IPC SCRIPT
 //  Works with nodeIntegration:true / contextIsolation:false
 //  ipcRenderer is available directly via require('electron')
 // ════════════════════════════════════════════════
@@ -2305,7 +2302,7 @@ var productTabbedView = (containerId) => { console.log('Mock Tab view loaded for
 // ── Saved config (persisted to localStorage) ──────────────
 const CFG_KEY = 'ph_config';
 const UPLOAD_HISTORY_KEY = 'ph_upload_history';
-const TARGET_KEYS = ['cloudscraper', 'local', 'oracle'];
+const TARGET_KEYS = ['pilehead', 'local', 'oracle'];
 function loadCfg() {
   try { return JSON.parse(localStorage.getItem(CFG_KEY) || '{}'); } catch(e) { return {}; }
 }
@@ -2332,7 +2329,7 @@ function mapFileCfg(c) {
   if (!c || typeof c !== 'object') return {};
   return {
     wpProfiles: c.wpProfiles || [],
-    activeWpProfile: c.activeWpProfile || 'Main Site',
+    activeWpProfile: c.activeWpProfile || 'Pilehead (Main)',
     wpUrl: c.wp?.url || '',
     wpKey: c.wp?.key || '',
     wpSecret: c.wp?.secret || '',
@@ -2389,7 +2386,7 @@ function toScraperConfig(c) {
     },
     ik: {
       privateKey: c.ikPrivateKey || '',
-      folder: c.ikFolder || '/myfiles'
+      folder: c.ikFolder || '/pilehead'
     }
   };
 }
@@ -2397,9 +2394,9 @@ function toScraperConfig(c) {
 function targetKeyForProfile(profile) {
   const name = String(profile?.name || '').toLowerCase();
   const url  = String(profile?.url || '').toLowerCase();
-  if (name.includes('local') || url.includes('cloudscraper-local.local') || url.includes('localhost')) return 'local';
+  if (name.includes('local') || url.includes('pilehead-local.local') || url.includes('localhost')) return 'local';
   if (name.includes('oracle') || url.includes('129.159.') || url.includes('oracle')) return 'oracle';
-  return 'cloudscraper';
+  return 'pilehead';
 }
 
 function getDefaultUploadTargets(profiles) {
@@ -2409,7 +2406,7 @@ function getDefaultUploadTargets(profiles) {
       set.add(targetKeyForProfile(profile));
     }
   });
-  if (!set.size) set.add('cloudscraper');
+  if (!set.size) set.add('pilehead');
   return TARGET_KEYS.filter(key => set.has(key));
 }
 
@@ -2435,7 +2432,7 @@ function getDefaultUploadTargets(profiles) {
       set.add(targetKeyForProfile(profile));
     }
   });
-  if (!set.size) set.add('cloudscraper');
+  if (!set.size) set.add('pilehead');
   return TARGET_KEYS.filter(key => set.has(key));
 }
 
@@ -2490,7 +2487,7 @@ async function populateSettings() {
   // If no profiles exist but we have legacy config, create default profile from it
   if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
     profiles = [
-      { name: 'Main Site', url: c.wpUrl, key: c.wpKey, secret: c.wpSecret, autoUpload: !!c.autoUpload, mediaUsername: c.wpMediaUsername || '', mediaAppPassword: c.wpMediaAppPassword || '' },
+      { name: 'Pilehead (Main)', url: c.wpUrl, key: c.wpKey, secret: c.wpSecret, autoUpload: !!c.autoUpload, mediaUsername: c.wpMediaUsername || '', mediaAppPassword: c.wpMediaAppPassword || '' },
       { name: 'WP Local', url: 'http://localhost/wp', key: '', secret: '', autoUpload: false, mediaUsername: '', mediaAppPassword: '' },
       { name: 'Oracle Cloud', url: '', key: '', secret: '', autoUpload: false, mediaUsername: '', mediaAppPassword: '' }
     ];
@@ -2510,7 +2507,7 @@ async function populateSettings() {
     });
     
     // Set active profile
-    let active = c.activeWpProfile || 'Main Site';
+    let active = c.activeWpProfile || 'Pilehead (Main)';
     if (!profiles.some(p => p.name === active) && profiles.length > 0) active = profiles[0].name;
     pSelect.value = active;
 
@@ -2826,7 +2823,7 @@ function getUploadResultItems(result) {
 }
 
 function buildTargetStatus(selectedProfiles, uploadItems, selectedTargets) {
-  const targets = { cloudscraper: { selected: false, success: false }, local: { selected: false, success: false }, oracle: { selected: false, success: false } };
+  const targets = { pilehead: { selected: false, success: false }, local: { selected: false, success: false }, oracle: { selected: false, success: false } };
   (selectedTargets || []).forEach((key) => {
     if (targets[key]) targets[key].selected = true;
   });
@@ -2891,7 +2888,7 @@ function updateUploadHistoryEntry(id, patchFn) {
 }
 
 function targetStatusText(targets) {
-  const labels = { cloudscraper: 'PH', local: 'Local', oracle: 'Oracle' };
+  const labels = { pilehead: 'PH', local: 'Local', oracle: 'Oracle' };
   return TARGET_KEYS
     .filter((key) => targets?.[key]?.selected)
     .map((key) => `${labels[key]}:${targets[key].success ? '✓' : '✕'}`)
@@ -3167,7 +3164,7 @@ document.getElementById('azure-test-btn').addEventListener('click', async () => 
     const res = await ipcRenderer.invoke('azure-chat-completion', {
       endpoint, deployment, apiKey, apiVersion,
       payload: {
-        messages: [{ role: 'user', content: 'Say "Cloud Scraper Azure OK" in 3 words.' }],
+        messages: [{ role: 'user', content: 'Say "Pilehead Azure OK" in 3 words.' }],
         max_tokens: 20
       }
     });
@@ -3717,7 +3714,7 @@ document.getElementById('clear-btn').addEventListener('click',()=>{
         try {
             const c = loadCfg();
             c.ikPrivateKey = privateKeyEl.value.trim();
-            c.ikFolder     = folderEl.value.trim() || '/myfiles';
+            c.ikFolder     = folderEl.value.trim() || '/pilehead';
             saveCfg(c);
             saveKeyBtn.textContent = '✓ Saved';
             setTimeout(() => saveKeyBtn.textContent = '💾 Save Key', 1500);
@@ -3848,7 +3845,7 @@ document.getElementById('clear-btn').addEventListener('click',()=>{
         if (!checkedIds.length) return;
 
         const ikKey    = (privateKeyEl.value || '').trim();
-        const ikFolder = (folderEl.value || '/myfiles').trim();
+        const ikFolder = (folderEl.value || '/pilehead').trim();
         if (!ikKey) { alert('ImageKit Private Key is required.'); return; }
 
         const wpUrl   = (loadCfg().wpUrl || '').replace(/\/+$/, '');
@@ -5072,8 +5069,8 @@ document.getElementById('clear-btn').addEventListener('click',()=>{
           if (wppDelGcsOpt() && gcsUrls.length) extras.push(gcsUrls.length + ' GCS files');
           
           let msg = 'Delete product "' + btn.dataset.name + '" #' + btn.dataset.id + '\nfrom:';
-          if (selectedDomains.primary) msg += '\n  ☑ ' + (primary?._label || 'Main Domain') + ' (primarysite.com)';
-          if (selectedDomains.oracle) msg += '\n  ☑ ' + (oracle?._label || 'Oracle Cloud') + ' (oracle.primarysite.com)';
+          if (selectedDomains.primary) msg += '\n  ☑ ' + (primary?._label || 'Main Domain') + ' (pilehead.com)';
+          if (selectedDomains.oracle) msg += '\n  ☑ ' + (oracle?._label || 'Oracle Cloud') + ' (oracle.pilehead.com)';
           if (extras.length) msg += '\n\n' + extras.join('\n');
           msg += '\n\nThis CANNOT be undone.';
           
@@ -5137,8 +5134,8 @@ document.getElementById('clear-btn').addEventListener('click',()=>{
       if (delGcs) extras.push('+ GCS images');
       
       let msg = 'Delete ' + checked.length + ' product(s) from:';
-      if (selectedDomains.primary) msg += '\n  ☑ ' + (primary?._label || 'Main Domain') + ' (primarysite.com)';
-      if (selectedDomains.oracle) msg += '\n  ☑ ' + (oracle?._label || 'Oracle Cloud') + ' (oracle.primarysite.com)';
+      if (selectedDomains.primary) msg += '\n  ☑ ' + (primary?._label || 'Main Domain') + ' (pilehead.com)';
+      if (selectedDomains.oracle) msg += '\n  ☑ ' + (oracle?._label || 'Oracle Cloud') + ' (oracle.pilehead.com)';
       if (extras.length) msg += '\n\n' + extras.join('\n');
       msg += '\n\nThis CANNOT be undone.';
       
@@ -5658,7 +5655,7 @@ logRenderer('Calling populateSettings...');
     try {
         await populateSettings();
         logRenderer('populateSettings finished.');
-        sysLog('Cloud Console v1.1.0 initialised', 'INFO');
+        sysLog('Pilehead Console v1.1.0 initialised', 'INFO');
         sysLog(`Platform: Cloud Web`, 'DEBUG');
         const cfg0 = loadCfg();
         sysLog(cfg0.wpUrl ? `WP: ${cfg0.wpUrl}` : 'WP: not configured', cfg0.wpUrl ? 'INFO' : 'DEBUG');
