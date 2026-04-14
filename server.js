@@ -68,40 +68,11 @@ app.post('/api/scrape', async (req, res) => {
   // Respond immediately so the browser isn't waiting indefinitely
   res.json({ success: true, message: 'Scraping engine has started!' });
 
-  // Read config natively from settings.json and map it safely to engine format
   const configPath = path.join(__dirname, 'config', 'settings.json');
   let rawConfig = {};
   if (fs.existsSync(configPath)) {
       try { rawConfig = JSON.parse(fs.readFileSync(configPath, 'utf8') || '{}'); } catch(e){}
   }
-
-  const mappedConfig = {
-      ...rawConfig,
-      wp: {
-          url: rawConfig.wpUrl || '',
-          key: rawConfig.wpKey || '',
-          secret: rawConfig.wpSecret || '',
-          autoUpload: rawConfig.autoUpload || false,
-          mediaUsername: rawConfig.wpMediaUsername || '',
-          mediaAppPassword: rawConfig.wpMediaAppPassword || ''
-      },
-      azure: {
-          endpoint: rawConfig.azEndpoint || '',
-          apiKey: rawConfig.azKey || '',
-          deployment: rawConfig.azDeployment || '',
-          apiVersion: rawConfig.azVersion || ''
-      },
-      gcs: {
-          bucket: rawConfig.gcsBucket || '',
-          token: rawConfig.gcsToken || '',
-          serviceAccountPath: rawConfig.gcsKeyPath || '',
-          folder: rawConfig.gcsDsFolder || '',
-          imageFolder: rawConfig.gcsImgFolder || '',
-          fosrocImageFolder: rawConfig.gcsDsFolder || '',
-          imageStorageMode: rawConfig.gcsImageStorage || 'gcs',
-          publicRead: true
-      }
-  };
 
   // Make sure orchestration works
   if (!orchestrator || typeof orchestrator.processSingle !== 'function') {
@@ -130,7 +101,7 @@ app.post('/api/scrape', async (req, res) => {
             const unified = await orchestrator.processSingle({
                 url: url,
                 selectedWebsite,
-                config: mappedConfig,
+                config: rawConfig,
                 browser,
                 scrapeModules,
                 onProgress: (step, detail) => {

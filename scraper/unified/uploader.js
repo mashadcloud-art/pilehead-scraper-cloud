@@ -118,9 +118,10 @@ async function uploadAll(prepared, config, browser) {
       ? config.wpProfiles 
       : (config.wp ? [config.wp] : []);
 
-  // Filter valid profiles and check autoUpload flag
+  // Filter valid profiles and check autoUpload flag, MUST match the activeWpProfile string
+  const activeName = config.activeWpProfile;
   const activeProfiles = profiles.filter(p => 
-      p.url && p.key && p.secret && (p.autoUpload !== false)
+      p.url && p.key && p.secret && (p.autoUpload !== false) && (!activeName || p.name === activeName)
   );
 
   if (activeProfiles.length === 0) {
