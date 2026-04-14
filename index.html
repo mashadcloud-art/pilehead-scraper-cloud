@@ -2175,15 +2175,11 @@ function saveCfg(patch) {
   return cfg;
 }
 
-function loadCfgFile() {
+async function loadCfgFile() {
   try {
-    if (typeof require === 'undefined') return {};
-    const fs = require('fs');
-    const path = require('path');
-    const p = path.join(process.cwd(), 'config', 'settings.json');
-    if (!fs.existsSync(p)) return {};
-    const raw = fs.readFileSync(p, 'utf8');
-    return JSON.parse(raw || '{}');
+    const res = await fetch('/api/config');
+    if (res.ok) return await res.json();
+    return {};
   } catch(e) { return {}; }
 }
 
@@ -2334,9 +2330,9 @@ function buildWpLinks(product, cfg) {
 }
 
 // Pre-fill settings fields from saved config on load
-function populateSettings() {
+async function populateSettings() {
   const stored = loadCfg();
-  const fileCfg = mapFileCfg(loadCfgFile());
+  const fileCfg = mapFileCfg(await loadCfgFile());
   
   // Force file config (settings.json) to take precedence for profiles
   if (fileCfg.wpProfiles && fileCfg.wpProfiles.length > 0) {
@@ -5518,21 +5514,22 @@ document.getElementById('clear-btn').addEventListener('click',()=>{
 })();
 // ── Startup ──────────────────────────────────
 logRenderer('Calling populateSettings...');
-try {
-    populateSettings();
-    logRenderer('populateSettings finished.');
-} catch (e) {
-    logRenderer('populateSettings failed: ' + e.message);
-}
-
-sysLog('Pilehead Console v1.1.0 initialised', 'INFO');
-sysLog(`Platform: ${process.platform}`, 'DEBUG');
-const cfg0 = loadCfg();
-sysLog(cfg0.wpUrl ? `WP: ${cfg0.wpUrl}` : 'WP: not configured', cfg0.wpUrl ? 'INFO' : 'DEBUG');
-sysLog(cfg0.azEndpoint ? 'Azure: configured' : 'Azure: not configured', cfg0.azEndpoint ? 'INFO' : 'DEBUG');
-sysLog(cfg0.gcsBucket ? `GCS bucket: ${cfg0.gcsBucket}` : 'GCS: not configured', cfg0.gcsBucket ? 'INFO' : 'DEBUG');
-sysLog('Ready — select a module to begin', 'INFO');
-logRenderer('Startup complete.');
+(async () => {
+    try {
+        await populateSettings();
+        logRenderer('populateSettings finished.');
+        sysLog('Pilehead Console v1.1.0 initialised', 'INFO');
+        sysLog(`Platform: Cloud Web`, 'DEBUG');
+        const cfg0 = loadCfg();
+        sysLog(cfg0.wpUrl ? `WP: ${cfg0.wpUrl}` : 'WP: not configured', cfg0.wpUrl ? 'INFO' : 'DEBUG');
+        sysLog(cfg0.azEndpoint ? 'Azure: configured' : 'Azure: not configured', cfg0.azEndpoint ? 'INFO' : 'DEBUG');
+        sysLog(cfg0.gcsBucket ? `GCS bucket: ${cfg0.gcsBucket}` : 'GCS: not configured', cfg0.gcsBucket ? 'INFO' : 'DEBUG');
+        sysLog('Ready — select a module to begin', 'INFO');
+        logRenderer('Startup complete.');
+    } catch (e) {
+        logRenderer('populateSettings failed: ' + e.message);
+    }
+})();
 
 </script>
 <script src="updater-ui.js"></script>
