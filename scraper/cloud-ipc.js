@@ -124,7 +124,7 @@ async function handle(channel, data) {
                 return { success: false, error: 'Not implemented on Cloud Backend via IPC Bridge' };
         }
     } catch (e) {
-        console.error(\`[CloudIPC] Error executing \${channel}:\`, e);
+        console.error(`[CloudIPC] Error executing ${channel}:`, e);
         return { success: false, error: e.message };
     }
 }
