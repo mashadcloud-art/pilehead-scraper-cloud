@@ -234,7 +234,7 @@ html, body {
 
 /* Titlebar center title */
 .titlebar-title {
-  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 100%; padding: 0 40px;
   font-size: 13px; font-weight: 500; color: var(--fg-3);
   letter-spacing: -0.01em; pointer-events: none;
   display: flex; align-items: center; gap: 8px;
@@ -967,7 +967,10 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
    <div style="background:var(--os-bg-2);padding:40px;border-radius:12px;border: 1px solid #ff3b30;box-shadow:0 0 40px rgba(255,59,48,0.2);width:360px;text-align:center;">
        <h1 style="margin-top:0; color:#ff3b30;">⏳ Trial Expired</h1>
        <p style="color:#eee; line-height:1.5;">Your 48-Hour Free Trial has expired. Please contact support to upgrade to a Paid Plan to unlock your scraping dashboard.</p>
-       <button onclick="localStorage.removeItem('jwt'); window.location.reload();" style="margin-top:20px;padding:10px 20px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;">Logout</button>
+       <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
+           <button onclick="localStorage.removeItem('jwt'); window.location.reload();" style="padding:10px 20px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;">Logout</button>
+           <a href="https://wa.me/971522199617" target="_blank" style="padding:10px 20px;background:#25D366;color:#fff;border:none;border-radius:6px;cursor:pointer;text-decoration:none;font-weight:bold;">💬 Contact Support on WhatsApp</a>
+       </div>
    </div>
 </div>
 
@@ -1040,7 +1043,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
     </div>
     <div class="titlebar-title">
       <div class="titlebar-icon">PH</div>
-      Pilehead Developer Console <span style="font-size: 10px; opacity: 0.6; margin-left: 6px;">v1.1.0</span>
+      Cloud Scraper Console <span style="font-size: 10px; opacity: 0.6; margin-left: 6px;">v1.1.0</span> <button onclick="localStorage.removeItem('jwt'); window.location.reload();" style="pointer-events:auto;margin-left:auto;padding:5px 12px;background:var(--red);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">Logout</button>
     </div>
     <div class="titlebar-right">
       <div class="tb-pill"><div class="tb-dot on"></div>System Online</div>
@@ -1138,7 +1141,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
           <div class="mc-icon-wrap" style="background:rgba(255,255,255,0.06);">+</div>
           <div class="mc-label">More coming</div>
           <div class="mc-title" style="color:var(--fg-4);">Future Module</div>
-          <div class="mc-desc" style="color:var(--fg-4);">Additional modules will be added in future updates to the Pilehead console.</div>
+          <div class="mc-desc" style="color:var(--fg-4);">Additional modules will be added in future updates to the cloud console.</div>
           <div class="mc-footer">
             <div class="mc-status soon"><div class="mc-status-dot"></div>Roadmap</div>
           </div>
@@ -1155,7 +1158,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
           <div class="sb-app-row" id="home-btn">
             <div class="sb-app-icon mc-icon-blue" style="width:32px;height:32px;border-radius:8px;font-size:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0055d4,var(--blue));">PH</div>
             <div class="sb-app-info">
-              <div class="sb-app-name">Pilehead Console</div>
+              <div class="sb-app-name">Cloud Console</div>
               <div class="sb-app-sub">v1.1.0 · Local</div>
             </div>
             <div class="sb-home-btn" title="Back to Dashboard">⌂</div>
@@ -1212,7 +1215,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
         <!-- Page toolbar -->
         <div class="page-toolbar">
           <div class="pt-breadcrumb">
-            <span>Pilehead</span>
+            <span>Cloud Scraper</span>
             <span class="sep">›</span>
             <span class="current" id="page-crumb">Scraper</span>
           </div>
@@ -1363,7 +1366,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.6; font-size: 12px
                   <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px;">
                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--fg-2);">
                       <input type="checkbox" id="target-pilehead" style="width:14px;height:14px;accent-color:var(--blue);">
-                      <span>Pilehead Domain</span>
+                      <span>Primary Domain</span>
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--fg-2);">
                       <input type="checkbox" id="target-local" style="width:14px;height:14px;accent-color:var(--teal);">
@@ -5655,7 +5658,7 @@ logRenderer('Calling populateSettings...');
     try {
         await populateSettings();
         logRenderer('populateSettings finished.');
-        sysLog('Pilehead Console v1.1.0 initialised', 'INFO');
+        sysLog('Cloud Console v1.1.0 initialised', 'INFO');
         sysLog(`Platform: Cloud Web`, 'DEBUG');
         const cfg0 = loadCfg();
         sysLog(cfg0.wpUrl ? `WP: ${cfg0.wpUrl}` : 'WP: not configured', cfg0.wpUrl ? 'INFO' : 'DEBUG');
